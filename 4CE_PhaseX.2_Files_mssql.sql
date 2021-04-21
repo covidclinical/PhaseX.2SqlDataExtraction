@@ -2592,7 +2592,7 @@ begin
 		+'alter table '+save_phase1_as_prefix+'DiagProcMed add primary key (cohort, concept_type, concept_code, siteid);'
 		+'alter table '+save_phase1_as_prefix+'RaceByLocalCode add primary key (cohort, race_local_code, siteid);'
 		+'alter table '+save_phase1_as_prefix+'RaceBy4CECode add primary key (cohort, race_4ce, siteid);'
-		+'alter table '+save_phase1_as_prefix+'LabCodes add primary key (fource_loinc, local_lab_code, local_lab_units);'
+		+'alter table '+save_phase1_as_prefix+'LabCodes add primary key (fource_loinc, local_lab_code, local_lab_units, siteid);'
 		from #fource_config
 	exec sp_executesql @SavePhase1AsTablesSQL
 end
