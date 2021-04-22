@@ -9,7 +9,7 @@ By default, the files will only include patients with a positive SARS-CoV-2 test
 
 Upload your Phase 1.2 files (obfuscated aggregate counts and statistics) to
 
-https://connects.catalyst.harvard.edu/4cef 
+https://connects.catalyst.harvard.edu/4ce
 
 (Note - The data upload website has not yet been updated for Phase 1.2.)
 
