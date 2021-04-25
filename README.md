@@ -15,7 +15,11 @@ https://connects.catalyst.harvard.edu/4ce
 
 Your Phase 2.2 files (non-obfuscated aggregate files and patient-level data files) should never leave your institution.
 
-A description of all the files can be found at
+A PowerPoint overview of Phase X.2 files can be found at
+
+https://github.com/covidclinical/PhaseX.2SqlDataExtraction/blob/main/4CE_PhaseX.2_File_Overview.pptx
+
+Detailed descriptions of all the files can be found at
 
 https://github.com/covidclinical/PhaseX.2SqlDataExtraction/blob/main/4CE_PhaseX.2_File_Descriptions.xlsx
 
