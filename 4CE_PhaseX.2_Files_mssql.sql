@@ -1,7 +1,7 @@
 --##############################################################################
 --##############################################################################
 --### 4CE Phase 1.2 and 2.2
---### Date: April 21, 2021
+--### Date: May 4, 2021
 --### Database: Microsoft SQL Server
 --### Data Model: i2b2
 --### Created By: Griffin Weber (weber@hms.harvard.edu)
@@ -163,7 +163,7 @@ insert into #fource_config
 		'dbo.FourCE_', -- save_phase1_as_prefix (don't use "4CE" since it starts with a number)
 		-- Phase 2
 		0, -- include_extra_cohorts_phase2 (please set to 1 if allowed by your IRB and institution)
-		1, -- replace_patient_num
+		0, -- replace_patient_num
 		0, -- output_phase2_as_columns
 		0, -- output_phase2_as_csv
 		0, -- save_phase2_as_columns
@@ -295,13 +295,13 @@ insert into #fource_code_map
 -- COVID-19 Test Option #2: an ontology path (e.g., COVID ACT "Any Positive Test" path)
 insert into #fource_code_map
 	select distinct 'covidpos', concept_cd
-		from crc.concept_dimension c
+		from dbo.concept_dimension c
 		where concept_path like '\ACT\UMLS_C0031437\SNOMED_3947185011\UMLS_C0022885\UMLS_C1335447\%'
 			and concept_cd is not null
 			and not exists (select * from #fource_code_map m where m.code='covidpos' and m.local_code=c.concept_cd)
 	union all
 	select distinct 'covidneg', concept_cd
-		from crc.concept_dimension c
+		from dbo.concept_dimension c
 		where concept_path like '\ACT\UMLS_C0031437\SNOMED_3947185011\UMLS_C0022885\UMLS_C1334932\%'
 			and concept_cd is not null
 			and not exists (select * from #fource_code_map m where m.code='covidneg' and m.local_code=c.concept_cd)
@@ -386,9 +386,9 @@ insert into #fource_lab_map
 insert into #fource_lab_map
 	select distinct l.fource_loinc, l.fource_lab_units, l.fource_lab_name, l.scale_factor, d.concept_cd, l.local_lab_units, l.local_lab_name
 	from #fource_lab_map l
-		inner join crc.concept_dimension c
+		inner join dbo.concept_dimension c
 			on l.local_lab_code = c.concept_cd
-		inner join crc.concept_dimension d
+		inner join dbo.concept_dimension d
 			on d.concept_path like c.concept_path+'%'
 	where not exists (
 		select *
@@ -402,7 +402,7 @@ insert into #fource_lab_map
 update l
 	set l.local_lab_name = c.name_char
 	from #fource_lab_map l
-		inner join crc.concept_dimension c
+		inner join dbo.concept_dimension c
 			on l.local_lab_code = c.concept_cd
 */
 
@@ -419,7 +419,7 @@ create table #fource_lab_units_facts (
 )
 insert into #fource_lab_units_facts
 	select concept_cd, units_cd, count(*), avg(nval_num), stdev(nval_num)
-	from crc.observation_fact with (nolock)
+	from dbo.observation_fact with (nolock)
 	where concept_cd in (select local_lab_code from #fource_lab_map)
 		and start_date >= '1/1/2019'
 	group by concept_cd, units_cd
@@ -532,17 +532,17 @@ insert into #fource_med_map
 -- WARNING: This query might take several minutes to run.
 /*
 select concept_path, concept_cd
-	into #med_paths
-	from crc.concept_dimension
+	into #fource_med_paths
+	from dbo.concept_dimension
 	where concept_path like '\ACT\Medications\%'
-		and concept_cd in (select concept_cd from crc.observation_fact with (nolock)) 
-alter table #med_paths add primary key (concept_path)
+		and concept_cd in (select concept_cd from dbo.observation_fact with (nolock)) 
+alter table #fource_med_paths add primary key (concept_path)
 insert into #fource_med_map
 	select distinct m.med_class, 'Expand', d.concept_cd
 	from #fource_med_map m
-		inner join crc.concept_dimension c
+		inner join dbo.concept_dimension c
 			on m.local_med_code = c.concept_cd
-		inner join #med_paths d
+		inner join #fource_med_paths d
 			on d.concept_path like c.concept_path+'%'
 	where not exists (
 		select *
@@ -717,28 +717,28 @@ insert into #fource_proc_map
 		union all select 'Bronchoscopy', c from (select '10847001' c union select '68187007') t
 	) t
 
--- Use the concept_dimension to get an expanded list of medication codes (optional)
--- This will find paths corresponding to concepts already in the #fource_med_map table,
+-- Use the concept_dimension to get an expanded list of procedure codes (optional)
+-- This will find paths corresponding to concepts already in the #fource_proc_map table,
 -- and then find all the concepts corresponding to child paths.
 -- WARNING: This query might take several minutes to run.
 /*
 select concept_path, concept_cd
-	into #med_paths
-	from crc.concept_dimension
-	where concept_path like '\ACT\Medications\%'
-		and concept_cd in (select concept_cd from crc.observation_fact with (nolock)) 
-alter table #med_paths add primary key (concept_path)
-insert into #fource_med_map
-	select distinct m.med_class, 'Expand', d.concept_cd
-	from #fource_med_map m
-		inner join crc.concept_dimension c
-			on m.local_med_code = c.concept_cd
-		inner join #med_paths d
+	into #fource_proc_paths
+	from dbo.concept_dimension
+	where concept_path like '\ACT\Procedures\%'
+		and concept_cd in (select concept_cd from dbo.observation_fact with (nolock)) 
+alter table #fource_proc_paths add primary key (concept_path)
+insert into #fource_proc_map
+	select distinct m.proc_group, 'Expand', d.concept_cd
+	from #fource_proc_map m
+		inner join dbo.concept_dimension c
+			on m.local_proc_code = c.concept_cd
+		inner join #fource_proc_paths d
 			on d.concept_path like c.concept_path+'%'
 	where not exists (
 		select *
-		from #fource_med_map t
-		where t.med_class = m.med_class and t.local_med_code = d.concept_cd
+		from #fource_proc_map t
+		where t.proc_group = m.proc_group and t.local_proc_code = d.concept_cd
 	)
 */
 
@@ -819,7 +819,7 @@ create table #fource_covid_tests (
 alter table #fource_covid_tests add primary key (patient_num, test_result, test_date)
 insert into #fource_covid_tests
 	select distinct f.patient_num, m.code, cast(start_date as date)
-		from crc.observation_fact f with (nolock)
+		from dbo.observation_fact f with (nolock)
 			inner join #fource_code_map m
 				on f.concept_cd = m.local_code and m.code in ('covidpos','covidneg','covidU071')
 
@@ -837,22 +837,22 @@ insert into #fource_admissions
 	from (
 		-- Select by inout_cd
 		select patient_num, start_date, end_date
-			from crc.visit_dimension
+			from dbo.visit_dimension
 			where start_date >= '1/1/2019'
 				and patient_num in (select patient_num from #fource_covid_tests)
 				and inout_cd in (select local_code from #fource_code_map where code = 'inpatient_inout_cd')
 		union all
 		-- Select by location_cd
 		select patient_num, start_date, end_date
-			from crc.visit_dimension v
+			from dbo.visit_dimension v
 			where start_date >= '1/1/2019'
 				and patient_num in (select patient_num from #fource_covid_tests)
 				and location_cd in (select local_code from #fource_code_map where code = 'inpatient_location_cd')
 		union all
 		-- Select by concept_cd
 		select f.patient_num, f.start_date, isnull(f.end_date,v.end_date)
-			from crc.observation_fact f
-				inner join crc.visit_dimension v
+			from dbo.observation_fact f
+				inner join dbo.visit_dimension v
 					on v.encounter_num=f.encounter_num and v.patient_num=f.patient_num
 			where f.start_date >= '1/1/2019'
 				and f.patient_num in (select patient_num from #fource_covid_tests)
@@ -877,22 +877,22 @@ begin
 		from (
 			-- Select by inout_cd
 			select patient_num, start_date, end_date
-				from crc.visit_dimension
+				from dbo.visit_dimension
 				where start_date >= '1/1/2019'
 					and patient_num in (select patient_num from #fource_covid_tests)
 					and inout_cd in (select local_code from #fource_code_map where code = 'icu_inout_cd')
 			union all
 			-- Select by location_cd
 			select patient_num, start_date, end_date
-				from crc.visit_dimension v
+				from dbo.visit_dimension v
 				where start_date >= '1/1/2019'
 					and patient_num in (select patient_num from #fource_covid_tests)
 					and location_cd in (select local_code from #fource_code_map where code = 'icu_location_cd')
 			union all
 			-- Select by concept_cd
 			select f.patient_num, f.start_date, isnull(f.end_date,v.end_date)
-				from crc.observation_fact f
-					inner join crc.visit_dimension v
+				from dbo.observation_fact f
+					inner join dbo.visit_dimension v
 						on v.encounter_num=f.encounter_num and v.patient_num=f.patient_num
 				where f.start_date >= '1/1/2019'
 					and f.patient_num in (select patient_num from #fource_covid_tests)
@@ -915,7 +915,7 @@ begin
 	-- The death_date is estimated later in the SQL if it is null here.
 	insert into #fource_death
 		select patient_num, isnull(death_date,'1/1/1900') 
-		from crc.patient_dimension
+		from dbo.patient_dimension
 		where (death_date is not null or vital_status_cd in ('Y'))
 			and patient_num in (select patient_num from #fource_covid_tests)
 end
@@ -1175,7 +1175,7 @@ insert into #fource_observations (cohort, patient_num, severe, concept_type, con
 		-999,
 		-999
  	from #fource_config x
-		cross join crc.observation_fact f with (nolock)
+		cross join dbo.observation_fact f with (nolock)
 		inner join #fource_cohort_patients p 
 			on f.patient_num=p.patient_num 
 				and cast(f.start_date as date) between dateadd(dd,-365,p.admission_date) and p.source_data_updated_date
@@ -1196,7 +1196,7 @@ insert into #fource_observations (cohort, patient_num, severe, concept_type, con
 		-999,
 		-999
  	from #fource_config x
-		cross join crc.observation_fact f with (nolock)
+		cross join dbo.observation_fact f with (nolock)
 		inner join #fource_cohort_patients p 
 			on f.patient_num=p.patient_num 
 				and cast(f.start_date as date) between dateadd(dd,-365,p.admission_date) and p.source_data_updated_date
@@ -1217,7 +1217,7 @@ insert into #fource_observations (cohort, patient_num, severe, concept_type, con
 		-999,
 		-999
 	from #fource_med_map m
-		inner join crc.observation_fact f with (nolock)
+		inner join dbo.observation_fact f with (nolock)
 			on f.concept_cd = m.local_med_code
 		inner join #fource_cohort_patients p 
 			on f.patient_num=p.patient_num 
@@ -1237,7 +1237,7 @@ insert into #fource_observations (cohort, patient_num, severe, concept_type, con
 		avg(f.nval_num*l.scale_factor),
 		log(avg(f.nval_num*l.scale_factor) + 0.5) -- natural log (ln), not log base 10; using log(avg()) rather than avg(log()) on purpose
 	from #fource_lab_map l
-		inner join crc.observation_fact f with (nolock)
+		inner join dbo.observation_fact f with (nolock)
 			on f.concept_cd=l.local_lab_code and isnull(nullif(f.units_cd,''),'DEFAULT')=l.local_lab_units
 		inner join #fource_cohort_patients p 
 			on f.patient_num=p.patient_num
@@ -1262,7 +1262,7 @@ insert into #fource_observations (cohort, patient_num, severe, concept_type, con
 		-999,
 		-999
  	from #fource_proc_map x
-		inner join crc.observation_fact f with (nolock)
+		inner join dbo.observation_fact f with (nolock)
 			on f.concept_cd like x.local_proc_code
 		inner join #fource_cohort_patients p 
 			on f.patient_num=p.patient_num 
@@ -1509,7 +1509,7 @@ insert into #fource_LocalPatientSummary
 		isnull(substring(m.code,13,99),'other')
 	from #fource_config x
 		cross join #fource_cohort_patients c
-		left outer join crc.patient_dimension p
+		left outer join dbo.patient_dimension p
 			on p.patient_num=c.patient_num
 		left outer join #fource_code_map m
 			on p.sex_cd = m.local_code
@@ -1524,7 +1524,7 @@ update s
 				select patient_num,
 					max(case when m.code='sex_fact:male' then 1 else 0 end) male,
 					max(case when m.code='sex_fact:female' then 1 else 0 end) female
-				from crc.observation_fact f with (nolock)
+				from dbo.observation_fact f with (nolock)
 					inner join #fource_code_map m
 						on f.concept_cd=m.local_code
 							and m.code in ('sex_fact:male','sex_fact:female')
@@ -1597,7 +1597,7 @@ begin
 			-- Race from the patient_dimension table
 			select c.cohort, c.patient_num, m.local_code race_local_code, substring(m.code,14,999) race_4ce
 				from #fource_cohort_patients c
-					inner join crc.patient_dimension p
+					inner join dbo.patient_dimension p
 						on p.patient_num=c.patient_num
 					inner join #fource_code_map m
 						on p.race_cd = m.local_code
@@ -1606,7 +1606,7 @@ begin
 			-- Race from the observation_fact table
 			select c.cohort, c.patient_num, m.local_code race_local_code, substring(m.code,11,999) race_4ce
 				from #fource_cohort_patients c
-					inner join crc.observation_fact p with (nolock)
+					inner join dbo.observation_fact p with (nolock)
 						on p.patient_num=c.patient_num
 					inner join #fource_code_map m
 						on p.concept_cd = m.local_code
