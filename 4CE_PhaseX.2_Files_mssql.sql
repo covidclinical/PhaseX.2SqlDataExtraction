@@ -1,7 +1,7 @@
 --##############################################################################
 --##############################################################################
 --### 4CE Phase 1.2 and 2.2
---### Date: May 4, 2021
+--### Date: May 6, 2021
 --### Database: Microsoft SQL Server
 --### Data Model: i2b2
 --### Created By: Griffin Weber (weber@hms.harvard.edu)
@@ -96,6 +96,19 @@ your schema. The code also assumes you have a single fact table called
 "dbo.observation_fact". If you use multiple fact tables, then search for
 "observation_fact" and change it as needed.
 
+CODE SECTIONS:
+This script is divided into 9 major sections. 
+Search for "SECTION #N" to jump to that section.
+1) Configuration and code mappings (all sites should edit this sql)
+2) Special concepts and dates (check if the logic and tables are correct)
+3) Cohort patients and clinical data (edit if you use multiple fact tables)
+4) Phase 2 patient-level tables
+5) Phase 2 aggregate count tables 
+6) Phase 1 aggregate count tables
+7) Final table modifications
+8) Output results
+9) Cleanup (optional, to drop temp tables)
+
 */
 
 
@@ -105,6 +118,7 @@ your schema. The code also assumes you have a single fact table called
 --##############################################################################
 --##############################################################################
 --###
+--### SECTION #1:
 --### Configuration and code mappings (modify for your institution)
 --###
 --##############################################################################
@@ -122,6 +136,7 @@ create table #fource_config (
 	race_data_available bit, -- 1 if your site collects race/ethnicity data; 0 if your site does not collect this.
 	icu_data_available bit, -- 1 if you have data on whether patients were in the ICU
 	death_data_available bit, -- 1 if you have data on whether patients have died
+	adjust_death_date bit, -- 0 by default, 1 to set death date = max(death date, last fact date) if the patient has died
 	code_prefix_icd9cm varchar(50), -- prefix (scheme) used in front of a ICD9CM diagnosis code; set to '' if not collected or no prefix used
 	code_prefix_icd10cm varchar(50), -- prefix (scheme) used in front of a ICD10CM diagnosis code; set to '' if not collected or no prefix used
 	source_data_updated_date date, -- the date your source data were last updated (e.g., '3/25/2021'); set to NULL if data go to the day you run this script
@@ -148,6 +163,7 @@ insert into #fource_config
 		1, -- race_data_available
 		1, -- icu_data_available
 		1, -- death_data_available
+		0, -- adjust_death_date
 		'DIAG|ICD9:', -- code_prefix_icd9cm
 		'DIAG|ICD10:', -- code_prefix_icd10cm
 		NULL, -- source_data_updated_date
@@ -198,7 +214,7 @@ insert into #fource_code_map
 	union all select 'inpatient_inout_cd', 'IN'
 	-- Inpatient visits (from the visit_dimension.location_cd field)
 	union all select 'inpatient_location_cd', 'Inpatient'
-	-- ICU visits (from the observation_fact.concept_cd field)
+	-- Inpatient visits (from the observation_fact.concept_cd field)
 	union all select 'inpatient_concept_cd', 'UMLS:C1547137' -- from ACT ontology
 
 -- ICU visit codes (optional)
@@ -797,6 +813,7 @@ update #fource_cohort_config
 --##############################################################################
 --##############################################################################
 --###
+--### SECTION #2:
 --### Get COVID test results, admission, ICU dates, and death dates.
 --### Many sites will not have to modify this code.
 --### Only make changes if you require special logic for these variables. 
@@ -927,6 +944,7 @@ end
 --##############################################################################
 --##############################################################################
 --###
+--### SECTION #3:
 --### Setup the cohorts and retrieve the clinical data for the patients
 --### (Most sites will not have to modify any SQL beyond this point)
 --###
@@ -1342,17 +1360,20 @@ begin
 			inner join #fource_death p
 				on p.patient_num = c.patient_num
 	-- Check that there aren't more recent facts for the deceased patients.
-	update c
-		set c.death_date = d.death_date
-		from #fource_cohort_patients c
-			inner join (
-				select p.patient_num, cast(max(f.calendar_date) as date) death_date
-				from #fource_cohort_patients p
-					inner join #fource_observations f
-						on f.cohort=p.cohort and f.patient_num=p.patient_num
-				where p.death_date is not null and f.calendar_date > p.death_date
-				group by p.cohort, p.patient_num
-			) d on c.patient_num = d.patient_num
+	if exists (select * from #fource_config where adjust_death_date = 1)
+	begin
+		update c
+			set c.death_date = d.death_date
+			from #fource_cohort_patients c
+				inner join (
+					select p.patient_num, cast(max(f.calendar_date) as date) death_date
+					from #fource_cohort_patients p
+						inner join #fource_observations f
+							on f.cohort=p.cohort and f.patient_num=p.patient_num
+					where p.death_date is not null and f.calendar_date > p.death_date
+					group by p.cohort, p.patient_num
+				) d on c.patient_num = d.patient_num
+	end
 	-- Make sure the death date is not after the source data updated date
 	update #fource_cohort_patients
 		set death_date = null
@@ -1395,6 +1416,7 @@ insert into #fource_date_list
 --##############################################################################
 --##############################################################################
 --###
+--### SECTION #4:
 --### Assemble data for Phase 2 local PATIENT-LEVEL tables
 --###
 --##############################################################################
@@ -1621,6 +1643,7 @@ end
 --##############################################################################
 --##############################################################################
 --###
+--### SECTION #5:
 --### Assemble data for Phase 2 local AGGREGATE COUNT tables.
 --### These are the local versions without obfuscation.
 --###
@@ -1924,6 +1947,7 @@ insert into #fource_LocalRaceBy4CECode
 --##############################################################################
 --##############################################################################
 --###
+--### SECTION #6:
 --### Assemble data for Phase 1 shared AGGREGATE COUNT tables.
 --### These are the shared versions which may include obfuscation.
 --###
@@ -2305,7 +2329,9 @@ end
 --##############################################################################
 --##############################################################################
 --###
---### Finish up
+--### SECTION #7:
+--### Final table modifications (removing cohorts and all zero rows, replacing
+--### the patient_num with a random study_num, and assigning a siteid).
 --###
 --##############################################################################
 --##############################################################################
@@ -2409,6 +2435,7 @@ update #fource_LabCodes set siteid = (select siteid from #fource_config)
 --##############################################################################
 --##############################################################################
 --###
+--### SECTION #8:
 --### Output results
 --###
 --##############################################################################
@@ -2656,6 +2683,7 @@ end
 --##############################################################################
 --##############################################################################
 --###
+--### SECTION #9:
 --### Cleanup to drop temp tables (optional)
 --###
 --##############################################################################
@@ -2718,4 +2746,3 @@ drop table #fource_LocalPatientRace
 drop table #fource_LocalPatientMapping 
 
 */
-
