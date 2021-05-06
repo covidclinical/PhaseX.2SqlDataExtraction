@@ -26,6 +26,8 @@ https://docs.google.com/spreadsheets/d/1Xl9juDBXt86P3xQtsoTaBl2zPl1BIiAG9DI3Roty
 
 RELEASE NOTES
 
+2021-05-06: Added a config option to set whether to move the death date to the last fact date; added comments to various places in the script.
+
 2021-05-04: Set the default database schema to "dbo."; set replace_patient_num=0 by default; fixed bugs in optional SQL to get an expanded list of medication and procedure codes from the ACT ontology.
 
 2021-04-21: Initial version of the MSSQL script.
