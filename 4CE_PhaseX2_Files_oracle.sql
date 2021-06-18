@@ -2284,7 +2284,7 @@ insert into fource_cohort_config
 	union all select 'PosAdm2020Q2', 1, 1, NULL, '01-APR-2020', '30-JUN-2020' from dual
 	union all select 'PosAdm2020Q3', 1, 1, NULL, '01-JUL-2020', '30-SEP-2020' from dual
 	union all select 'PosAdm2020Q4', 1, 1, NULL, '01-OCT-2020', '31-DEC-2020' from dual
-	union all select 'PosAdm2021Q1', 1, 1, NULL, '01-JAN-2021', '31-MAR2021' from dual
+	union all select 'PosAdm2021Q1', 1, 1, NULL, '01-JAN-2021', '31-MAR-2021' from dual
 	union all select 'PosAdm2021Q2', 1, 1, NULL, '01-APR-2021', '30-JUN-2021' from dual
 	union all select 'PosAdm2021Q3', 1, 1, NULL, '01-JUL-2021', '30-SEP-2021' from dual
 	union all select 'PosAdm2021Q4', 1, 1, NULL, '01-OCT-2021', '31-DEC-2021' from dual;
@@ -3174,7 +3174,7 @@ commit;
           ) x 
         on (s.cohort=x.cohort and s.patient_num=x.patient_num) 
         when matched then
-        update set s.last_discharge_date = (case when x.last_discharge_date>s.source_data_updated_date then to_date('01-JAN-1900','DD-MON-YYY') 
+        update set s.last_discharge_date = (case when x.last_discharge_date>s.source_data_updated_date then to_date('01-JAN-1900','DD-MON-YYYY') 
                                             else x.last_discharge_date end),
                    s.still_in_hospital = (case when x.last_discharge_date>s.source_data_updated_date then 1 else 0 end);
 commit;
