@@ -2909,6 +2909,13 @@ update fource_cohort_patients p set severe = 1,
             );
 commit;
 
+-- Flag the severe patients in the observations table
+update fource_observations f
+set f.severe=1
+where exists(select patient_num,cohort
+	     from fource_cohort_patients cwhere c.severe=0 and 
+f.patient_num = c.patient_num and f.cohort = c.cohort);
+
 --------------------------------------------------------------------------------
 -- Add death dates to patients who have died.
 --------------------------------------------------------------------------------
