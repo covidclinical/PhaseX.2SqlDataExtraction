@@ -462,7 +462,7 @@ create table fource_lab_units_facts (
 	fact_units varchar(50),
 	num_facts int,
 	mean_value numeric(18,5),
-	stddev_value numeric(18,5)
+	stdev_value numeric(18,5)
 ); 
 
 --188s
@@ -475,14 +475,14 @@ select concept_cd, units_cd, nval_num
     join fource_lab_map m  on m.local_lab_code = f.concept_cd 
 	where trunc(start_date) >= (select trunc(start_date) from fource_config where rownum = 1)
 )
-select concept_cd, units_cd, count(*) num_facts, avg(nval_num) avg_val, stddev(nval_num) stddev_val
+select concept_cd, units_cd, count(*) num_facts, avg(nval_num) avg_val, stdev(nval_num) stdev_val
 from labs_in_period
 group by concept_cd, units_cd);
 commit;
 --select * from fource_lab_units_facts;
 /*
 insert into fource_lab_units_facts
-	select concept_cd, units_cd, count(*), avg(nval_num), stddev(nval_num)
+	select concept_cd, units_cd, count(*), avg(nval_num), stdev(nval_num)
 	from @crcSchema.observation_fact f
     join fource_lab_map m  on m.local_lab_code = f.concept_cd 
 	where trunc(start_date) >= (select trunc(start_date) from fource_config where rownum = 1)
@@ -502,7 +502,7 @@ create table fource_lab_map_report (
 	local_lab_name varchar(500),
 	num_facts int,
 	mean_value numeric(18,5),
-	stddev_value numeric(18,5),
+	stdev_value numeric(18,5),
 	notes varchar(1000)
 )
 ; 
@@ -521,7 +521,7 @@ insert into fource_lab_map_report
 		nvl(m.local_lab_name,'((missing))') local_lab_name,
 		nvl(f.num_facts,0) num_facts,
 		nvl(f.mean_value,-999) mean_value,
-		nvl(f.stddev_value,-999) stddev_value,
+		nvl(f.stdev_value,-999) stdev_value,
 		(case when scale_factor is not null and num_facts is not null then 'GOOD: Code and units found in the data'
 			when m.fource_loinc is not null and c.fact_code is null then 'WARNING: This code from the lab mappings table could not be found in the data -- double check if you use another loinc or local code' 
 			when scale_factor is not null then 'WARNING: These local_lab_units in the lab mappings table could not be found in the data '
@@ -3436,19 +3436,19 @@ create table fource_LocalLabs (
 	days_since_admission int not null,
 	pts_all int,
 	mean_value_all numeric(18,5),
-	stddev_value_all numeric(18,5),
+	stdev_value_all numeric(18,5),
 	mean_log_value_all numeric(18,10),
-	stddev_log_value_all numeric(18,10),
+	stdev_log_value_all numeric(18,10),
 	pts_ever_severe int,
 	mean_value_ever_severe numeric(18,5),
-	stddev_value_ever_severe numeric(18,5),
+	stdev_value_ever_severe numeric(18,5),
 	mean_log_value_ever_severe numeric(18,10),
-	stddev_log_value_ever_severe numeric(18,10),
+	stdev_log_value_ever_severe numeric(18,10),
 	pts_never_severe int,
 	mean_value_never_severe numeric(18,5),
-	stddev_value_never_severe numeric(18,5),
+	stdev_value_never_severe numeric(18,5),
 	mean_log_value_never_severe numeric(18,10),
-	stddev_log_value_never_severe numeric(18,10)
+	stdev_log_value_never_severe numeric(18,10)
 ); 
 alter table fource_LocalLabs add primary key (cohort, loinc, days_since_admission, siteid);
 
@@ -3456,19 +3456,19 @@ insert into fource_LocalLabs
 	select  (select siteid from fource_config where rownum = 1) siteid, cohort, concept_code, days_since_admission,
 		count(*), 
 		avg(value), 
-		nvl(stddev(value),0),
+		nvl(stdev(value),0),
 		avg(logvalue), 
-		nvl(stddev(logvalue),0),
+		nvl(stdev(logvalue),0),
 		sum(severe), 
 		(case when sum(severe)=0 then -999 else avg(case when severe=1 then value else null end) end), 
-		(case when sum(severe)=0 then -999 else nvl(stddev(case when severe=1 then value else null end),0) end),
+		(case when sum(severe)=0 then -999 else nvl(stdev(case when severe=1 then value else null end),0) end),
 		(case when sum(severe)=0 then -999 else avg(case when severe=1 then logvalue else null end) end), 
-		(case when sum(severe)=0 then -999 else nvl(stddev(case when severe=1 then logvalue else null end),0) end),
+		(case when sum(severe)=0 then -999 else nvl(stdev(case when severe=1 then logvalue else null end),0) end),
 		sum(1-severe), 
 		(case when sum(1-severe)=0 then -999 else avg(case when severe=0 then value else null end) end), 
-		(case when sum(1-severe)=0 then -999 else nvl(stddev(case when severe=0 then value else null end),0) end),
+		(case when sum(1-severe)=0 then -999 else nvl(stdev(case when severe=0 then value else null end),0) end),
 		(case when sum(1-severe)=0 then -999 else avg(case when severe=0 then logvalue else null end) end), 
-		(case when sum(1-severe)=0 then -999 else nvl(stddev(case when severe=0 then logvalue else null end),0) end)
+		(case when sum(1-severe)=0 then -999 else nvl(stdev(case when severe=0 then logvalue else null end),0) end)
 	from fource_observations
 	where concept_type='LAB-LOINC' and days_since_admission>=0
 	group by cohort, concept_code, days_since_admission;
@@ -3697,19 +3697,19 @@ create table fource_Labs (
 	days_since_admission int not null,
 	pts_all int,
 	mean_value_all numeric(18,5),
-	stddev_value_all numeric(18,5),
+	stdev_value_all numeric(18,5),
 	mean_log_value_all numeric(18,10),
-	stddev_log_value_all numeric(18,10),
+	stdev_log_value_all numeric(18,10),
 	pts_ever_severe int,
 	mean_value_ever_severe numeric(18,5),
-	stddev_value_ever_severe numeric(18,5),
+	stdev_value_ever_severe numeric(18,5),
 	mean_log_value_ever_severe numeric(18,10),
-	stddev_log_value_ever_severe numeric(18,10),
+	stdev_log_value_ever_severe numeric(18,10),
 	pts_never_severe int,
 	mean_value_never_severe numeric(18,5),
-	stddev_value_never_severe numeric(18,5),
+	stdev_value_never_severe numeric(18,5),
 	mean_log_value_never_severe numeric(18,10),
-	stddev_log_value_never_severe numeric(18,10)
+	stdev_log_value_never_severe numeric(18,10)
 );
 alter table fource_Labs add primary key (cohort, loinc, days_since_admission, siteid);
 insert into fource_Labs 
@@ -3912,13 +3912,13 @@ insert into fource_LabCodes
 	where (select obfuscation_small_count_mask from fource_config where rownum=1)  > 0;
 
 	update fource_Labs
-		set pts_all=-99, mean_value_all=-99, stddev_value_all=-99, mean_log_value_all=-99, stddev_log_value_all=-99
+		set pts_all=-99, mean_value_all=-99, stdev_value_all=-99, mean_log_value_all=-99, stdev_log_value_all=-99
 		where pts_all<(select obfuscation_small_count_mask from fource_config where rownum=1)
 	where (select obfuscation_small_count_mask from fource_config where rownum=1)  > 0;
     
 	update fource_Labs -- Need to mask both ever_severe and never_severe if either of them are below the small count threshold, since all=ever+never
-		set pts_ever_severe=-99, mean_value_ever_severe=-99, stddev_value_ever_severe=-99, mean_log_value_ever_severe=-99, stddev_log_value_ever_severe=-99,
-			pts_never_severe=-99, mean_value_never_severe=-99, stddev_value_never_severe=-99, mean_log_value_never_severe=-99, stddev_log_value_never_severe=-99
+		set pts_ever_severe=-99, mean_value_ever_severe=-99, stdev_value_ever_severe=-99, mean_log_value_ever_severe=-99, stdev_log_value_ever_severe=-99,
+			pts_never_severe=-99, mean_value_never_severe=-99, stdev_value_never_severe=-99, mean_log_value_never_severe=-99, stdev_log_value_never_severe=-99
 		where (pts_ever_severe<(select obfuscation_small_count_mask from fource_config where rownum=1)) or (pts_never_severe<(select obfuscation_small_count_mask from fource_config where rownum=1))
 	where (select obfuscation_small_count_mask from fource_config where rownum=1)  > 0;
 
@@ -4212,7 +4212,7 @@ spool off
 
 
 spool c:\Devtools\NCATS\covid\4cescripts\Labs.csv
-select s LabsCSV from ( select 0 z, 'siteid,cohort,loinc,days_since_admission,pts_all,mean_value_all,stddev_value_all,mean_log_value_all,stddev_log_value_all,pts_ever_severe,mean_value_ever_severe,stddev_value_ever_severe,mean_log_value_ever_severe,stddev_log_value_ever_severe,pts_never_severe,mean_value_never_severe,stddev_value_never_severe,mean_log_value_never_severe,stddev_log_value_never_severe' s from dual union all select row_number() over (order by cohort,loinc,days_since_admission) z, cast(siteid as varchar2(2000)) || ',' || cast(cohort as varchar2(2000)) || ',' || cast(loinc as varchar2(2000)) || ',' || cast(days_since_admission as varchar2(2000)) || ',' || cast(pts_all as varchar2(2000)) || ',' || cast(mean_value_all as varchar2(2000)) || ',' || cast(stddev_value_all as varchar2(2000)) || ',' || cast(mean_log_value_all as varchar2(2000)) || ',' || cast(stddev_log_value_all as varchar2(2000)) || ',' || cast(pts_ever_severe as varchar2(2000)) || ',' || cast(mean_value_ever_severe as varchar2(2000)) || ',' || cast(stddev_value_ever_severe as varchar2(2000)) || ',' || cast(mean_log_value_ever_severe as varchar2(2000)) || ',' || cast(stddev_log_value_ever_severe as varchar2(2000)) || ',' || cast(pts_never_severe as varchar2(2000)) || ',' || cast(mean_value_never_severe as varchar2(2000)) || ',' || cast(stddev_value_never_severe as varchar2(2000)) || ',' || cast(mean_log_value_never_severe as varchar2(2000)) || ',' || cast(stddev_log_value_never_severe as varchar2(2000)) from fource_Labs union all select 9999999 z, '' from dual) t order by z;
+select s LabsCSV from ( select 0 z, 'siteid,cohort,loinc,days_since_admission,pts_all,mean_value_all,stdev_value_all,mean_log_value_all,stdev_log_value_all,pts_ever_severe,mean_value_ever_severe,stdev_value_ever_severe,mean_log_value_ever_severe,stdev_log_value_ever_severe,pts_never_severe,mean_value_never_severe,stdev_value_never_severe,mean_log_value_never_severe,stdev_log_value_never_severe' s from dual union all select row_number() over (order by cohort,loinc,days_since_admission) z, cast(siteid as varchar2(2000)) || ',' || cast(cohort as varchar2(2000)) || ',' || cast(loinc as varchar2(2000)) || ',' || cast(days_since_admission as varchar2(2000)) || ',' || cast(pts_all as varchar2(2000)) || ',' || cast(mean_value_all as varchar2(2000)) || ',' || cast(stdev_value_all as varchar2(2000)) || ',' || cast(mean_log_value_all as varchar2(2000)) || ',' || cast(stdev_log_value_all as varchar2(2000)) || ',' || cast(pts_ever_severe as varchar2(2000)) || ',' || cast(mean_value_ever_severe as varchar2(2000)) || ',' || cast(stdev_value_ever_severe as varchar2(2000)) || ',' || cast(mean_log_value_ever_severe as varchar2(2000)) || ',' || cast(stdev_log_value_ever_severe as varchar2(2000)) || ',' || cast(pts_never_severe as varchar2(2000)) || ',' || cast(mean_value_never_severe as varchar2(2000)) || ',' || cast(stdev_value_never_severe as varchar2(2000)) || ',' || cast(mean_log_value_never_severe as varchar2(2000)) || ',' || cast(stdev_log_value_never_severe as varchar2(2000)) from fource_Labs union all select 9999999 z, '' from dual) t order by z;
 spool off
 
 
@@ -4252,7 +4252,7 @@ spool off
 
 
 spool c:\Devtools\NCATS\covid\4cescripts\LocalLabs.csv
-select s LocalLabsCSV from ( select 0 z, 'siteid,cohort,loinc,days_since_admission,pts_all,mean_value_all,stddev_value_all,mean_log_value_all,stddev_log_value_all,pts_ever_severe,mean_value_ever_severe,stddev_value_ever_severe,mean_log_value_ever_severe,stddev_log_value_ever_severe,pts_never_severe,mean_value_never_severe,stddev_value_never_severe,mean_log_value_never_severe,stddev_log_value_never_severe' s from dual union all select row_number() over (order by cohort,loinc,days_since_admission) z, cast(siteid as varchar2(2000)) || ',' || cast(cohort as varchar2(2000)) || ',' || cast(loinc as varchar2(2000)) || ',' || cast(days_since_admission as varchar2(2000)) || ',' || cast(pts_all as varchar2(2000)) || ',' || cast(mean_value_all as varchar2(2000)) || ',' || cast(stddev_value_all as varchar2(2000)) || ',' || cast(mean_log_value_all as varchar2(2000)) || ',' || cast(stddev_log_value_all as varchar2(2000)) || ',' || cast(pts_ever_severe as varchar2(2000)) || ',' || cast(mean_value_ever_severe as varchar2(2000)) || ',' || cast(stddev_value_ever_severe as varchar2(2000)) || ',' || cast(mean_log_value_ever_severe as varchar2(2000)) || ',' || cast(stddev_log_value_ever_severe as varchar2(2000)) || ',' || cast(pts_never_severe as varchar2(2000)) || ',' || cast(mean_value_never_severe as varchar2(2000)) || ',' || cast(stddev_value_never_severe as varchar2(2000)) || ',' || cast(mean_log_value_never_severe as varchar2(2000)) || ',' || cast(stddev_log_value_never_severe as varchar2(2000)) from fource_LocalLabs union all select 9999999 z, '' from dual) t order by z;
+select s LocalLabsCSV from ( select 0 z, 'siteid,cohort,loinc,days_since_admission,pts_all,mean_value_all,stdev_value_all,mean_log_value_all,stdev_log_value_all,pts_ever_severe,mean_value_ever_severe,stdev_value_ever_severe,mean_log_value_ever_severe,stdev_log_value_ever_severe,pts_never_severe,mean_value_never_severe,stdev_value_never_severe,mean_log_value_never_severe,stdev_log_value_never_severe' s from dual union all select row_number() over (order by cohort,loinc,days_since_admission) z, cast(siteid as varchar2(2000)) || ',' || cast(cohort as varchar2(2000)) || ',' || cast(loinc as varchar2(2000)) || ',' || cast(days_since_admission as varchar2(2000)) || ',' || cast(pts_all as varchar2(2000)) || ',' || cast(mean_value_all as varchar2(2000)) || ',' || cast(stdev_value_all as varchar2(2000)) || ',' || cast(mean_log_value_all as varchar2(2000)) || ',' || cast(stdev_log_value_all as varchar2(2000)) || ',' || cast(pts_ever_severe as varchar2(2000)) || ',' || cast(mean_value_ever_severe as varchar2(2000)) || ',' || cast(stdev_value_ever_severe as varchar2(2000)) || ',' || cast(mean_log_value_ever_severe as varchar2(2000)) || ',' || cast(stdev_log_value_ever_severe as varchar2(2000)) || ',' || cast(pts_never_severe as varchar2(2000)) || ',' || cast(mean_value_never_severe as varchar2(2000)) || ',' || cast(stdev_value_never_severe as varchar2(2000)) || ',' || cast(mean_log_value_never_severe as varchar2(2000)) || ',' || cast(stdev_log_value_never_severe as varchar2(2000)) from fource_LocalLabs union all select 9999999 z, '' from dual) t order by z;
 spool off
 
 
