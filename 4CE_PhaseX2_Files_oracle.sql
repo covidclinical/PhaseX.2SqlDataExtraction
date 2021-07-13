@@ -475,14 +475,14 @@ select concept_cd, units_cd, nval_num
     join fource_lab_map m  on m.local_lab_code = f.concept_cd 
 	where trunc(start_date) >= (select trunc(start_date) from fource_config where rownum = 1)
 )
-select concept_cd, units_cd, count(*) num_facts, avg(nval_num) avg_val, stdev(nval_num) stdev_val
+select concept_cd, units_cd, count(*) num_facts, avg(nval_num) avg_val, stddev(nval_num) stdev_val
 from labs_in_period
 group by concept_cd, units_cd);
 commit;
 --select * from fource_lab_units_facts;
 /*
 insert into fource_lab_units_facts
-	select concept_cd, units_cd, count(*), avg(nval_num), stdev(nval_num)
+	select concept_cd, units_cd, count(*), avg(nval_num), stddev(nval_num)
 	from @crcSchema.observation_fact f
     join fource_lab_map m  on m.local_lab_code = f.concept_cd 
 	where trunc(start_date) >= (select trunc(start_date) from fource_config where rownum = 1)
@@ -3456,19 +3456,19 @@ insert into fource_LocalLabs
 	select  (select siteid from fource_config where rownum = 1) siteid, cohort, concept_code, days_since_admission,
 		count(*), 
 		avg(value), 
-		nvl(stdev(value),0),
+		nvl(stddev(value),0),
 		avg(logvalue), 
-		nvl(stdev(logvalue),0),
+		nvl(stddev(logvalue),0),
 		sum(severe), 
 		(case when sum(severe)=0 then -999 else avg(case when severe=1 then value else null end) end), 
-		(case when sum(severe)=0 then -999 else nvl(stdev(case when severe=1 then value else null end),0) end),
+		(case when sum(severe)=0 then -999 else nvl(stddev(case when severe=1 then value else null end),0) end),
 		(case when sum(severe)=0 then -999 else avg(case when severe=1 then logvalue else null end) end), 
-		(case when sum(severe)=0 then -999 else nvl(stdev(case when severe=1 then logvalue else null end),0) end),
+		(case when sum(severe)=0 then -999 else nvl(stddev(case when severe=1 then logvalue else null end),0) end),
 		sum(1-severe), 
 		(case when sum(1-severe)=0 then -999 else avg(case when severe=0 then value else null end) end), 
-		(case when sum(1-severe)=0 then -999 else nvl(stdev(case when severe=0 then value else null end),0) end),
+		(case when sum(1-severe)=0 then -999 else nvl(stddev(case when severe=0 then value else null end),0) end),
 		(case when sum(1-severe)=0 then -999 else avg(case when severe=0 then logvalue else null end) end), 
-		(case when sum(1-severe)=0 then -999 else nvl(stdev(case when severe=0 then logvalue else null end),0) end)
+		(case when sum(1-severe)=0 then -999 else nvl(stddev(case when severe=0 then logvalue else null end),0) end)
 	from fource_observations
 	where concept_type='LAB-LOINC' and days_since_admission>=0
 	group by cohort, concept_code, days_since_admission;
