@@ -3914,13 +3914,13 @@ insert into fource_LabCodes
 	update fource_Labs
 		set pts_all=-99, mean_value_all=-99, stdev_value_all=-99, mean_log_value_all=-99, stdev_log_value_all=-99
 		where pts_all<(select obfuscation_small_count_mask from fource_config where rownum=1)
-	where (select obfuscation_small_count_mask from fource_config where rownum=1)  > 0;
+	and (select obfuscation_small_count_mask from fource_config where rownum=1)  > 0;
     
 	update fource_Labs -- Need to mask both ever_severe and never_severe if either of them are below the small count threshold, since all=ever+never
 		set pts_ever_severe=-99, mean_value_ever_severe=-99, stdev_value_ever_severe=-99, mean_log_value_ever_severe=-99, stdev_log_value_ever_severe=-99,
 			pts_never_severe=-99, mean_value_never_severe=-99, stdev_value_never_severe=-99, mean_log_value_never_severe=-99, stdev_log_value_never_severe=-99
 		where (pts_ever_severe<(select obfuscation_small_count_mask from fource_config where rownum=1)) or (pts_never_severe<(select obfuscation_small_count_mask from fource_config where rownum=1))
-	where (select obfuscation_small_count_mask from fource_config where rownum=1)  > 0;
+	and (select obfuscation_small_count_mask from fource_config where rownum=1)  > 0;
 
 	update fource_DiagProcMed
 		set pts_all_before_adm = (case when pts_all_before_adm<(select obfuscation_small_count_mask from fource_config where rownum=1) then -99 else pts_all_before_adm end),
