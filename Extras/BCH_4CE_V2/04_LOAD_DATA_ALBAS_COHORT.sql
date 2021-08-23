@@ -34,7 +34,7 @@ commit;
 --------------------------------------------------------------------------------
 -- Lab mappings report (for debugging lab mappings)
 --------------------------------------------------------------------------------
--- Get a list of all the codes and units in the data for 4CE labs since 1/1/2019
+-- Get a list of all the codes and units in the data for 4CE labs since 1/1/2017
 
 --Lab map table loaded before - separately .
 
@@ -166,7 +166,7 @@ insert into fource_admissions
                     where f.concept_cd in (select local_code from fource_code_map where code = 'inpatient_concept_cd')
             ) t
         ) t
-        where (admission_date >= to_date('01/01/2019','mm/dd/yyyy'  ) ) and (discharge_date >= admission_date);
+        where (admission_date >= to_date('01/01/2017','mm/dd/yyyy'  ) ) and (discharge_date >= admission_date);
 
         commit;
      
@@ -217,7 +217,7 @@ insert into fource_icu
 				where f.concept_cd in (select local_code from fource_code_map where code = 'icu_concept_cd')
 		) t
 	) t
-	where (start_date >= to_date('1/1/2019','mm/dd/yyyy') ) and (end_date >= start_date) ;
+	where (start_date >= to_date('1/1/2017','mm/dd/yyyy') ) and (end_date >= start_date) ;
     
     
 --------------------------------------------------------------------------------
@@ -245,14 +245,14 @@ insert into fource_death
 	from i2b2_blue.patient_dimension
 	where (death_date is not null or vital_status_cd in ('Y'))
 --		and patient_num not in (select patient_num from fource_covid_tests)
-		and death_date >= to_date('01/01/2019','mm/dd/rrrr');
+		and death_date >= to_date('01/01/2017','mm/dd/rrrr');
         
         commit;
         
 --Add jk
 insert into fource_cohort_config
 with t as (
-	select to_date('01/01/2019','mm/dd/rrrr') start_date, nvl(source_data_updated_date,sysdate) end_date
+	select to_date('01/01/2017','mm/dd/rrrr') start_date, nvl(source_data_updated_date,sysdate) end_date
 	from fource_config
     )
 	select 'AllAdm', 1, 1, end_date, start_date, end_date from t
