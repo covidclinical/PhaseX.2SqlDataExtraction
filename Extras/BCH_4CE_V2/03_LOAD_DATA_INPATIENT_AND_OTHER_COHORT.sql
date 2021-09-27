@@ -522,7 +522,7 @@ end;
 begin
 TM_LOG_PKG.log_msg( -999,'Step16 Load fource_cohort_config Start ', 'X');  
 
-  
+/*  
 insert into fource_cohort_config
 with t as (
 	select to_date('01/01/2019','MM/DD/YYYY') start_date, nvl(source_data_updated_date,sysdate) end_date
@@ -575,6 +575,8 @@ insert into fource_cohort_patients
     commit;
 end;
 /
+
+*/
 --******************************************************************************
 --******************************************************************************
 --*** Create a table of patient observations
