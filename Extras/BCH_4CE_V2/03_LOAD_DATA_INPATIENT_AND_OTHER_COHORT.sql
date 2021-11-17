@@ -12,7 +12,7 @@ insert into fource_config
 		'ICD10:', -- code_prefix_icd10cm
 		to_date('06-24-2021','mm-dd-yyyy'), -- source_data_updated_date
 		-- Phase 1
-		0, -- include_extra_cohorts_phase1 (please set to 1 if allowed by your IRB and institution)
+		1, -- include_extra_cohorts_phase1 (please set to 1 if allowed by your IRB and institution)
 		0, -- obfuscation_blur
 		0,--10, -- obfuscation_small_count_mask
 		0,--1, -- obfuscation_small_count_delete
@@ -22,7 +22,7 @@ insert into fource_config
 		0, -- save_phase1_as_columns
 		'dbo_FourCE_', -- save_phase1_as_prefix (don't use "4CE" since it starts with a number)
 		-- Phase 2
-		0, -- include_extra_cohorts_phase2 (please set to 1 if allowed by your IRB and institution) 
+		1, -- include_extra_cohorts_phase2 (please set to 1 if allowed by your IRB and institution) 
 		1, -- replace_patient_num 
 		0, -- output_phase2_as_columns
 		1, -- output_phase2_as_csv
