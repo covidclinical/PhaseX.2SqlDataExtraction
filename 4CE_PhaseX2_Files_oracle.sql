@@ -2913,7 +2913,7 @@ commit;
 update fource_observations f
 set f.severe=1
 where exists(select patient_num,cohort
-	     from fource_cohort_patients cwhere c.severe=0 and 
+	     from fource_cohort_patients c where c.severe=1 and 
 f.patient_num = c.patient_num and f.cohort = c.cohort);
 
 --------------------------------------------------------------------------------
