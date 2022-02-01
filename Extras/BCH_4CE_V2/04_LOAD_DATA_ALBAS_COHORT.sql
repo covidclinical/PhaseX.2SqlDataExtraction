@@ -204,8 +204,8 @@ with t as (
 	select to_date('01/01/2019','mm/dd/rrrr') start_date, nvl(source_data_updated_date,sysdate) end_date
 	from fource_config
     )
-	select 'AllAdm', 1, 1, end_date, start_date, end_date from t ;
-	--union all select 'AllNotAdm', 1, 1, end_date, start_date, end_date from t;
+	select 'AllAdm', 1, 1, end_date, start_date, end_date from t 
+	union all select 'AllNotAdm', 1, 1, end_date, start_date, end_date from t;
          TM_LOG_PKG.log_msg( -222,'Step7 Load fource_cohort_config Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
