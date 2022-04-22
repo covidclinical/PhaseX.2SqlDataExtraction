@@ -51,10 +51,19 @@ drop table fource_LocalPatClinicalCourse ;
 drop table fource_LocalPatObservations ;
 drop table fource_LocalPatientRace ;
 drop table fource_LocalPatientMapping ;
-commit;
+drop table stg_fource_misc;        
 
+drop table fource_misc;
 
-----
+create table stg_fource_misc
+(
+mrn  varchar2(100),
+misc_date varchar2(50) );
+create table fource_misc (
+        patient_num int not null,
+        misc_date date not null
+);
+alter table fource_misc add primary key (patient_num);
 
 
 create table fource_config (
