@@ -1,10 +1,9 @@
-
 --Extracts data for Albas cohort --'AllAdm'
 -- start date 01/01/2019 for cohort
 truncate table fource_config;
 
 begin
-TM_LOG_PKG.log_msg( -222,'Step1 Load fource_config Start ', 'X'); 
+LOG_PKG.log_msg( -999,'Step1 Load fource_config Start ', 'X');  
 insert into fource_config
 	select 'BCH', -- siteid
 		1, -- race_data_available
@@ -12,7 +11,7 @@ insert into fource_config
 		1, -- death_data_available
 		'ICD9:', -- code_prefix_icd9cm
 		'ICD10:', -- code_prefix_icd10cm
-		to_date('11-28-2021','mm-dd-yyyy'), -- source_data_updated_date
+		to_date('04-07-2022','mm-dd-yyyy'), -- source_data_updated_date 07Apr2022 jk
 		-- Phase 1
 		1, -- include_extra_cohorts_phase1 (please set to 1 if allowed by your IRB and institution)
 		0, -- obfuscation_blur
@@ -30,9 +29,9 @@ insert into fource_config
 		1, -- output_phase2_as_csv
 		0, -- save_phase2_as_columns
 		'dbo_FourCE_', -- save_phase2_as_prefix (don't use "4CE" since it starts with a number
-        to_date('01-JAN-2019')
+        to_date('01-JAN-2015')
     from dual;
- TM_LOG_PKG.log_msg( -222,'Step1 Load fource_config Rows '||sql%rowcount||' End ', 'X');  
+    LOG_PKG.log_msg( -999,'Step1 Load fource_config Rows '||sql%rowcount||' End ', 'X');  
 commit;
 end;
 /
@@ -42,11 +41,23 @@ end;
 --------------------------------------------------------------------------------
 -- Get a list of all the codes and units in the data for 4CE labs since 1/1/2019
 --Lab map table loaded before - separately .
+
+truncate table fource_lab_units_facts ;
+
+insert into fource_lab_units_facts
+	select concept_cd, units_cd, count(*), avg(nval_num), stddev(nval_num)
+	from observation_fact f
+    join fource_lab_map m  on m.local_lab_code = f.concept_cd 
+	where trunc(start_date) >= (select trunc(start_date) from fource_config where rownum = 1)
+	group by concept_cd, units_cd;
+   
+commit; --53 rows inserted.
+
 truncate table fource_lab_map_report ;
 
 
 begin
-TM_LOG_PKG.log_msg( -222,'Step2 Load fource_lab_map_report Start ', 'X');  
+LOG_PKG.log_msg( -222,'Step2 Load fource_lab_map_report Start ', 'X');  
 
 insert into fource_lab_map_report
 	select 
@@ -75,7 +86,7 @@ insert into fource_lab_map_report
 		left outer join (
 			select distinct fact_code from fource_lab_units_facts
 		) c on m.local_lab_code=c.fact_code;
-    TM_LOG_PKG.log_msg( -222,'Step2 Load fource_lab_map_report Rows '||sql%rowcount||' End ', 'X');          
+    LOG_PKG.log_msg( -222,'Step2 Load fource_lab_map_report Rows '||sql%rowcount||' End ', 'X');          
 commit;
 end;
 /
@@ -90,9 +101,9 @@ end;
 
 truncate table fource_cohort_config ;
 truncate table fource_covid_tests ;
---step 5
+--step 3
 begin
-TM_LOG_PKG.log_msg( -222,'Step3 Load fource_covid_tests Start ', 'X');  
+LOG_PKG.log_msg( -222,'Step3 Load fource_covid_tests Start ', 'X');  
 
 
 insert into fource_covid_tests
@@ -105,7 +116,7 @@ insert into fource_covid_tests
 		from observation_fact f --with (nolock)
 			inner join fource_code_map m
              on   f.CONCEPT_CD = m.local_code and m.code in ('covidU071');
-          TM_LOG_PKG.log_msg( -222,'Step3 Load fource_covid_tests Rows '||sql%rowcount||' End ', 'X');         
+          LOG_PKG.log_msg( -222,'Step3 Load fource_covid_tests Rows '||sql%rowcount||' End ', 'X');         
 commit;
 end;
 /
@@ -116,7 +127,7 @@ end;
 --------------------------------------------------------------------------------
 truncate table fource_admissions ;
 begin
-TM_LOG_PKG.log_msg( -222,'Step4 Load fource_admissions Start ', 'X');  
+LOG_PKG.log_msg( -222,'Step4 Load fource_admissions Start ', 'X');  
 
 insert into fource_admissions
     select *
@@ -141,7 +152,7 @@ insert into fource_admissions
         where (admission_date >= to_date('01/01/2019','mm/dd/yyyy'  ) ) and (discharge_date >= admission_date);
 
 
-        TM_LOG_PKG.log_msg( -222,'Step4 Load fource_admissions Rows  '||sql%rowcount||' End ', 'X'); 
+        LOG_PKG.log_msg( -222,'Step4 Load fource_admissions Rows  '||sql%rowcount||' End ', 'X'); 
          commit;
 end;
  /    
@@ -151,7 +162,7 @@ end;
 truncate table fource_icu ;
 --step7
 begin
-TM_LOG_PKG.log_msg( -222,'Step5 Load fource_icu Start ', 'X');   
+LOG_PKG.log_msg( -222,'Step5 Load fource_icu Start ', 'X');   
 
 insert into fource_icu
 	select *
@@ -174,7 +185,7 @@ insert into fource_icu
 		) t
 	) t
 	where (start_date >= to_date('01/01/2019','mm/dd/yyyy') ) and (end_date >= start_date) ;
-TM_LOG_PKG.log_msg( -222,'Step5 Load fource_icu Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step5 Load fource_icu Rows '||sql%rowcount||' End ', 'X'); 
    
     commit;
 end;    
@@ -185,7 +196,7 @@ end;
 truncate table fource_death ;
 --step8
 begin
-TM_LOG_PKG.log_msg( -222,'Step6 Load fource_death Start ', 'X');  
+LOG_PKG.log_msg( -222,'Step6 Load fource_death Start ', 'X');  
 insert into fource_death
 	select patient_num, nvl(death_date,to_date('01/01/1900','mm/dd/rrrr')) 
 	from patient_dimension
@@ -193,28 +204,28 @@ insert into fource_death
 --		and patient_num not in (select patient_num from fource_covid_tests)
 		and death_date >= to_date('01/01/2019','mm/dd/rrrr');
         
-       TM_LOG_PKG.log_msg( -222,'Step6 Load fource_death Rows '||sql%rowcount||' End ', 'X'); 
+       LOG_PKG.log_msg( -222,'Step6 Load fource_death Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
  /       
 
 begin
-   TM_LOG_PKG.log_msg( -222,'Step7 Load fource_cohort_config Rows Start', 'X'); 
+   LOG_PKG.log_msg( -222,'Step7 Load fource_cohort_config Rows Start', 'X'); 
 insert into fource_cohort_config
 with t as (
 	select to_date('01/01/2019','mm/dd/rrrr') start_date, nvl(source_data_updated_date,sysdate) end_date
 	from fource_config
     )
-	select 'AllAdm', 1, 1, end_date, start_date, end_date from t ;
-	--union all select 'AllNotAdm', 1, 1, end_date, start_date, end_date from t;
-       TM_LOG_PKG.log_msg( -222,'Step7 Load fource_cohort_config Rows '||sql%rowcount||' End ', 'X'); 
+	select 'AllAdm', 1, 1, end_date, start_date, end_date from t 
+	 union all select 'AllNotAdm', 1, 1, end_date, start_date, end_date from t;
+       LOG_PKG.log_msg( -222,'Step7 Load fource_cohort_config Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
 /
 truncate table fource_first_covid_tests ;
 
 begin
- TM_LOG_PKG.log_msg( -222,'Step8 Load fource_first_covid_tests Rows Start ', 'X'); 
+ LOG_PKG.log_msg( -222,'Step8 Load fource_first_covid_tests Rows Start ', 'X'); 
 insert into fource_first_covid_tests
 	select patient_num,
 			min(case when test_result='covidpos' then test_date else null end),
@@ -222,7 +233,7 @@ insert into fource_first_covid_tests
 			min(case when test_result='covidU071' then test_date else null end)
 		from fource_covid_tests
 		group by patient_num;
-       TM_LOG_PKG.log_msg( -222,'Step8 Load fource_first_covid_tests Rows '||sql%rowcount||' End ', 'X'); 
+       LOG_PKG.log_msg( -222,'Step8 Load fource_first_covid_tests Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
 /
@@ -237,7 +248,7 @@ end;
 truncate table fource_cohort_patients ;
 
 begin
-       TM_LOG_PKG.log_msg( -222,'Step9 Load fource_cohort_patients Rows Start ', 'X'); 
+       LOG_PKG.log_msg( -222,'Step9 Load fource_cohort_patients Rows Start ', 'X'); 
 insert into fource_cohort_patients
 	select c.cohort, a.patient_num, min(a.admission_date), c.source_data_updated_date, 0, null, null
 	from fource_admissions a
@@ -246,7 +257,7 @@ insert into fource_cohort_patients
 	where c.cohort='AllAdm'
 --		and a.patient_num not in (select patient_num from fource_cohort_patients)
 	group by c.cohort, a.patient_num, c.source_data_updated_date;
-      TM_LOG_PKG.log_msg( -222,'Step9 Load fource_cohort_patients Rows '||sql%rowcount||' End ', 'X'); 
+      LOG_PKG.log_msg( -222,'Step9 Load fource_cohort_patients Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
  /   
@@ -254,7 +265,7 @@ end;
 -- Get all patients who have an encounter
 
 begin
-TM_LOG_PKG.log_msg( -222,'Step10 Load fource_cohort_patients Rows Start', 'X'); 
+LOG_PKG.log_msg( -222,'Step10 Load fource_cohort_patients Rows Start', 'X'); 
 insert into fource_cohort_patients
 	select c.cohort, v.patient_num, min(v.start_date), c.source_data_updated_date, 0, null, null
 	from visit_dimension v
@@ -263,7 +274,7 @@ insert into fource_cohort_patients
 	where c.cohort='AllNotAdm'
 --		and v.patient_num not in (select patient_num from fource_cohort_patients)
 	group by c.cohort, v.patient_num, c.source_data_updated_date;
-    TM_LOG_PKG.log_msg( -222,'Step10 Load fource_cohort_patients Rows '||sql%rowcount||' End ', 'X'); 
+    LOG_PKG.log_msg( -222,'Step10 Load fource_cohort_patients Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;    
   /  
@@ -274,7 +285,7 @@ end;
 
 -- Create cohorts for patients who were admitted
 begin
-TM_LOG_PKG.log_msg( -222,'Step11 Load fource_cohort_config Rows Start', 'X'); 
+LOG_PKG.log_msg( -222,'Step11 Load fource_cohort_config Rows Start', 'X'); 
 insert into fource_cohort_config
         select * from (
 		-- Patients with a U07.1 code, no recorded positive test result, and were admitted
@@ -293,13 +304,13 @@ insert into fource_cohort_config
         where (select include_extra_cohorts_phase1 from fource_config where rownum = 1) = 1 
         or (select include_extra_cohorts_phase2 from fource_config where rownum = 1) = 1;
         
-TM_LOG_PKG.log_msg( -222,'Step11 Load fource_cohort_config Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step11 Load fource_cohort_config Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end; 
 /
 -- Add the patients for those cohorts
 begin
-TM_LOG_PKG.log_msg( -222,'Step12 Load fource_cohort_patients Rows Start', 'X'); 
+LOG_PKG.log_msg( -222,'Step12 Load fource_cohort_patients Rows Start', 'X'); 
 insert into fource_cohort_patients (cohort, patient_num, admission_date, source_data_updated_date, severe)
     select * from (
 		select c.cohort, t.patient_num, t.admission_date, c.source_data_updated_date, 0
@@ -330,28 +341,28 @@ insert into fource_cohort_patients (cohort, patient_num, admission_date, source_
         ) t
     where (select include_extra_cohorts_phase1 from fource_config where rownum = 1) = 1 
         or (select include_extra_cohorts_phase2 from fource_config where rownum = 1) = 1;
-TM_LOG_PKG.log_msg( -222,'Step12 Load fource_cohort_patients Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step12 Load fource_cohort_patients Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end; 
 /
 
 -- Create cohorts for patients who were not admitted
 begin
-TM_LOG_PKG.log_msg( -222,'Step13 Load fource_cohort_config Rows Start ', 'X'); 
+LOG_PKG.log_msg( -222,'Step13 Load fource_cohort_config Rows Start ', 'X'); 
 insert into fource_cohort_config
 		select replace(c.cohort,'Adm','NotAdm'), 
 				g.include_extra_cohorts_phase1, g.include_extra_cohorts_phase2,
 				c.source_data_updated_date, c.earliest_adm_date, c.latest_adm_date
 			from fource_cohort_config c cross apply fource_config g
 			where c.cohort like 'PosAdm%' or c.cohort like 'NegAdm%' or c.cohort like 'U071Adm%';
-TM_LOG_PKG.log_msg( -222,'Step13 Load fource_cohort_config Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step13 Load fource_cohort_config Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end; 
 /
 
 -- Add the patients for those cohorts using the test or diagnosis date as the "admission" (index) date
 begin
-TM_LOG_PKG.log_msg( -222,'Step14 Load fource_cohort_config Rows Start ', 'X'); 
+LOG_PKG.log_msg( -222,'Step14 Load fource_cohort_config Rows Start ', 'X'); 
 insert into fource_cohort_patients (cohort, patient_num, admission_date, source_data_updated_date, severe)
 		select c.cohort, t.patient_num, t.first_pos_date, c.source_data_updated_date, 0
 			from fource_cohort_config c
@@ -386,7 +397,7 @@ insert into fource_cohort_patients (cohort, patient_num, admission_date, source_
 				and trunc(t.first_neg_date) <= trunc(nvl(c.source_data_updated_date,t.first_neg_date))
 				and t.patient_num not in (select patient_num from fource_cohort_patients);
 
-TM_LOG_PKG.log_msg( -222,'Step14 Load fource_cohort_config Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step14 Load fource_cohort_config Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end; 
 /
@@ -398,12 +409,12 @@ end;
 -- Get a distinct list of patients
 truncate table fource_patients ;
 begin
-TM_LOG_PKG.log_msg( -222,'Step15 Load fource_patients Rows Start ', 'X'); 
+LOG_PKG.log_msg( -222,'Step15 Load fource_patients Rows Start ', 'X'); 
 insert into fource_patients
 	select patient_num, min(admission_date)
 		from fource_cohort_patients
 		group by patient_num;
-TM_LOG_PKG.log_msg( -222,'Step15 Load fource_patients Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step15 Load fource_patients Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end; 
 /
@@ -414,7 +425,7 @@ truncate table fource_observations ;
 --------------------------------------------------------------------------------
 
 begin
-TM_LOG_PKG.log_msg( -222,'Step16 Load fource_observations Rows Start ', 'X'); 
+LOG_PKG.log_msg( -222,'Step16 Load fource_observations Rows Start ', 'X'); 
 insert into fource_observations (cohort, patient_num, severe, concept_type, concept_code, calendar_date, days_since_admission, value, logvalue)
 	select distinct
 		p.cohort,
@@ -429,15 +440,15 @@ insert into fource_observations (cohort, patient_num, severe, concept_type, conc
  	from fource_cohort_patients p
 		inner join fource_covid_tests t
 			on p.patient_num=t.patient_num;
-TM_LOG_PKG.log_msg( -222,'Step16 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step16 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
 /
 --------------------------------------------------------------------------------
 -- Add children who develop MIS-C
 --------------------------------------------------------------------------------
-begin
-TM_LOG_PKG.log_msg( -222,'Step17 Load fource_observations Rows Start ', 'X'); 
+/*begin
+LOG_PKG.log_msg( -222,'Step17 Load fource_observations Rows Start ', 'X'); 
 insert into fource_observations (cohort, patient_num, severe, concept_type, concept_code, calendar_date, days_since_admission, value, logvalue)
 	select distinct
 		p.cohort,
@@ -453,16 +464,17 @@ insert into fource_observations (cohort, patient_num, severe, concept_type, conc
 		inner join fource_misc f --with (nolock)
 			on p.patient_num=f.patient_num;
             
-TM_LOG_PKG.log_msg( -222,'Step17 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step17 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
- /           
+ /     
+ */
 --create index fource_cohort_patients_ndx on fource_cohort_patients(patient_num);
 --------------------------------------------------------------------------------
--- Add diagnoses (ICD9) going back 365 days from admission ** JK
+-- Add diagnoses (ICD9) going back 365 days from admission 
 --------------------------------------------------------------------------------
 begin
-TM_LOG_PKG.log_msg( -222,'Step18 Load fource_observations Rows Start ', 'X'); 
+LOG_PKG.log_msg( -222,'Step18 Load fource_observations Rows Start ', 'X'); 
 insert into fource_observations (cohort, patient_num, severe, concept_type, concept_code, calendar_date, days_since_admission, value, logvalue)
 	select distinct
 		p.cohort,
@@ -480,7 +492,7 @@ insert into fource_observations (cohort, patient_num, severe, concept_type, conc
 				--and cast(trunc(f.start_date) as date) between dateadd(dd,@lookback_days,p.admission_date) and p.source_data_updated_date
                 and trunc(f.start_date) between trunc(p.admission_date)-365 and trunc(p.source_data_updated_date)
 	where f.concept_cd like ( select code_prefix_icd9cm || '%' from fource_config where rownum = 1 );-- and code_prefix_icd9cm <>'';
-TM_LOG_PKG.log_msg( -222,'Step18 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step18 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
 /
@@ -491,7 +503,7 @@ end;
 
 
 begin
-TM_LOG_PKG.log_msg( -222,'Step19 Load fource_observations Rows Start ', 'X'); 
+LOG_PKG.log_msg( -222,'Step19 Load fource_observations Rows Start ', 'X'); 
 insert into fource_observations (cohort, patient_num, severe, concept_type, concept_code, calendar_date, days_since_admission, value, logvalue)
 	select distinct
 		p.cohort,
@@ -510,7 +522,7 @@ insert into fource_observations (cohort, patient_num, severe, concept_type, conc
                 and trunc(f.start_date) between trunc(p.admission_date)-365 and trunc(p.source_data_updated_date)
 	where f.concept_cd like (select code_prefix_icd10cm || '%' from fource_config where rownum = 1);-- and code_prefix_icd10cm <>'';
 
-TM_LOG_PKG.log_msg( -222,'Step19 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step19 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
 /
@@ -524,7 +536,7 @@ end;
 declare
 
 begin
-              TM_LOG_PKG.log_msg( -222,'Step20 Load fource_observations Rows  Start ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step20 Load fource_observations Rows  Start ', 'X'); 
 
 for r_data in (  select distinct med_class from fource_med_map   m  ) loop
 insert into fource_observations (cohort, patient_num, severe, concept_type, concept_code, calendar_date, days_since_admission, value, logvalue)
@@ -547,29 +559,32 @@ insert into fource_observations (cohort, patient_num, severe, concept_type, conc
             and trunc(f.start_date) between trunc(p.admission_date)-365 and trunc(p.source_data_updated_date) 
              and modifier_cd ='@'  ;
 
-               TM_LOG_PKG.log_msg( -222,'Step20-1 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+               LOG_PKG.log_msg( -222,'Step20-1 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end loop;
 commit;
-              TM_LOG_PKG.log_msg( -222,'Step20 Load fource_observations Rows  End ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step20 Load fource_observations Rows  End ', 'X'); 
 end;
 /
 
 --and cast(trunc(f.start_date) as date) between dateadd(dd,@lookback_days,p.admission_date) and p.source_data_updated_date
 
---------------------------------------------------------------------------------
--- Add labs (LOINC) going back 60 days (two months)
---------------------------------------------------------------------------------
-
 declare
-
+v_local_lab_code  varchar2(2000);
+v_local_lab_units  varchar2(2000);
+    --step25
 begin
-   TM_LOG_PKG.log_msg( -222,'Step21 Load fource_observations Rows  Start ', 'X'); 
-for r_data in ( select distinct local_lab_code from fource_lab_map  ) loop
+LOG_PKG.log_msg( -222,'Step21 Load fource_observations Start ', 'X');  
+for r_data in ( select distinct local_lab_code,local_lab_units from fource_lab_map  ) loop
+
+v_local_lab_code := r_data.local_lab_code;
+v_local_lab_units := r_data.local_lab_units;
+
+
 --for r_data in ( select distinct patient_num from fource_cohort_patients fcp  ) loop
 
 insert into fource_observations (cohort, patient_num, severe, concept_type, concept_code, calendar_date, days_since_admission, value, logvalue)
-	select p.cohort,
+	select  p.cohort,
 		p.patient_num,
 		p.severe,
 		'LAB-LOINC',		
@@ -580,24 +595,31 @@ insert into fource_observations (cohort, patient_num, severe, concept_type, conc
 		ln(avg(f.nval_num*l.scale_factor) + 0.5) -- natural log (ln), not log base 10; using log(avg()) rather than avg(log()) on purpose
 	from fource_lab_map l
 		inner join observation_fact f --with (nolock)
-			on f.concept_cd=l.local_lab_code and nvl(nullif(f.units_cd,''),'DEFAULT')=l.local_lab_units
+			on f.concept_cd=l.local_lab_code  and nvl(nullif(f.units_cd,''),'DEFAULT')=l.local_lab_units
 		inner join fource_cohort_patients p 
 			on f.patient_num=p.patient_num
 	where l.local_lab_code is not null
 		and f.nval_num is not null
-        and f.concept_cd = r_data.local_lab_code
+        and l.local_lab_code  = r_data.local_lab_code
+        and l.local_lab_units = r_data.local_lab_units
 		and f.nval_num >= 0
 		and trunc(f.start_date) between trunc(p.admission_date)-60 and trunc(p.source_data_updated_date) --@lab lookback days
 	group by p.cohort, p.patient_num, p.severe, p.admission_date, trunc(f.start_date), l.fource_loinc;
-
-               TM_LOG_PKG.log_msg( -222,'Step21-1 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+LOG_PKG.log_msg( -222,'Step21 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end loop;
 commit;
-              TM_LOG_PKG.log_msg( -222,'Step21 Load fource_observations Rows  End ', 'X'); 
-end;
-/
+LOG_PKG.log_msg( -222,'Step21 Load fource_observations Rows  End ', 'X'); 
 
+exception
+ when others then
+       dbms_output.put_line('SQLCODE: '|| SQLCODE);
+        dbms_output.put_line('SQLERRM: '|| SQLERRM);
+LOG_PKG.log_msg( -222,'Step21 Load fource_observations Rows  Error '||v_local_lab_code||' '||v_local_lab_units, 'X'); 
+raise;
+end;
+
+/
 --------------------------------------------------------------------------------
 -- Add procedures (Proc Groups) going back 365 days  before this is running
 --------------------------------------------------------------------------------
@@ -605,7 +627,7 @@ end;
 set serveroutput on
 
 begin
- TM_LOG_PKG.log_msg( -222,'Step22 Load fource_observations Rows  Start ', 'X'); 
+ LOG_PKG.log_msg( -222,'Step22 Load fource_observations Rows  Start ', 'X'); 
 insert into fource_observations (cohort, patient_num, severe, concept_type, concept_code, calendar_date, days_since_admission, value, logvalue)
 	select distinct
 		p.cohort,
@@ -627,11 +649,11 @@ insert into fource_observations (cohort, patient_num, severe, concept_type, conc
     --and f.concept_cd = r_data.local_proc_code
     and trunc(f.start_date) between trunc(p.admission_date)-365 and trunc(p.source_data_updated_date);
     
-               TM_LOG_PKG.log_msg( -222,'Step22-1 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+               LOG_PKG.log_msg( -222,'Step22-1 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 
 
-              TM_LOG_PKG.log_msg( -222,'Step22 Load fource_observations Rows  End ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step22 Load fource_observations Rows  End ', 'X'); 
 end;
 /
 --------------------------------------------------------------------------------
@@ -639,7 +661,7 @@ end;
 --------------------------------------------------------------------------------
 --test select * from fource_observations where concept_code = 'ARDS';
 begin
-  TM_LOG_PKG.log_msg( -222,'Step23 Load fource_observations Rows  Start ', 'X'); 
+  LOG_PKG.log_msg( -222,'Step23 Load fource_observations Rows  Start ', 'X'); 
 insert into fource_observations (cohort, patient_num, severe, concept_type, concept_code, calendar_date, days_since_admission, value, logvalue)
 	-- Any PaCO2 or PaO2 lab test
 	select cohort, patient_num, severe, 'SEVERE-LAB' concept_type, 'BloodGas' concept_code, calendar_date, days_since_admission, avg(value), avg(logvalue)
@@ -659,9 +681,9 @@ insert into fource_observations (cohort, patient_num, severe, concept_type, conc
 		where (concept_type='DIAG-ICD9' and concept_code in ('997.31','99731'))
 			or (concept_type='DIAG-ICD10' and concept_code in ('J95.851','J95851'));
 
-              TM_LOG_PKG.log_msg( -222,'Step23-1 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step23-1 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
-              TM_LOG_PKG.log_msg( -222,'Step23 Load fource_observations Rows  End ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step23 Load fource_observations Rows  End ', 'X'); 
 end;
 /
 
@@ -679,7 +701,7 @@ end;
 --test select * from fource_cohort_patients where severe = 0;
 
 begin
-              TM_LOG_PKG.log_msg( -222,'Step24 Load fource_cohort_patients Rows Start ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step24 Load fource_cohort_patients Rows Start ', 'X'); 
 update fource_cohort_patients p set severe = 1, 
     severe_date=(select min(f.calendar_date)
                     from fource_observations f
@@ -707,7 +729,7 @@ update fource_cohort_patients p set severe = 1,
 				)
     			group by f.cohort, f.patient_num
             );
-              TM_LOG_PKG.log_msg( -222,'Step24 Load fource_cohort_patients Rows '||sql%rowcount||' End ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step24 Load fource_cohort_patients Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
 /
@@ -715,14 +737,14 @@ end;
 
 
 begin
-              TM_LOG_PKG.log_msg( -222,'Step25 Load fource_observations Rows Start ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step25 Load fource_observations Rows Start ', 'X'); 
 update fource_observations f
 set f.severe=1
 where exists(select patient_num,cohort
-	     from fource_cohort_patients c where c.severe=0 and 
+	     from fource_cohort_patients c where c.severe=1 and 
 f.patient_num = c.patient_num and f.cohort = c.cohort );
 
-              TM_LOG_PKG.log_msg( -222,'Step25 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step25 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
 /
@@ -735,7 +757,7 @@ end;
 
 begin
 
- TM_LOG_PKG.log_msg( -222,'Step26 Load fource_observations Rows Start ', 'X');
+ LOG_PKG.log_msg( -222,'Step26 Load fource_observations Rows Start ', 'X');
 	merge into fource_cohort_patients c
     using (
         select p.patient_num,
@@ -760,7 +782,7 @@ commit;
 		where death_date > source_data_updated_date
         and (select death_data_available from fource_config where rownum = 1)= 1;
 
-              TM_LOG_PKG.log_msg( -222,'Step26 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step26 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
 /
@@ -772,7 +794,7 @@ end;
 
   truncate table fource_date_list ;
 begin
-              TM_LOG_PKG.log_msg( -222,'Step27 Load fource_observations Rows Start ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step27 Load fource_observations Rows Start ', 'X'); 
 insert into fource_date_list select * from (
     with n as (
         select 0 n from dual union all select 1 from dual union all select 2 from dual union all select 3 from dual union all select 4 
@@ -790,14 +812,14 @@ insert into fource_date_list select * from (
 	) l inner join fource_cohort_config f on l.cohort=f.cohort
 	where d <= f.source_data_updated_date    
     );
-              TM_LOG_PKG.log_msg( -222,'Step27 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step27 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end;
 /
 
 truncate table fource_LocalPatClinicalCourse drop storage;
 begin
-              TM_LOG_PKG.log_msg( -222,'Step28 Load fource_LocalPatClinicalCourse Rows Start ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step28 Load fource_LocalPatClinicalCourse Rows Start ', 'X'); 
 
 for r_data in ( select distinct cohort,patient_num from fource_cohort_patients ) loop
 insert into fource_LocalPatClinicalCourse 
@@ -820,16 +842,16 @@ insert into fource_LocalPatClinicalCourse
             and p.patient_num = r_data.patient_num
 	group by p.cohort, p.patient_num, p.admission_date, d.d;
 commit; -- 5 minutes  
-              TM_LOG_PKG.log_msg( -222,'Step28-1 Load fource_LocalPatClinicalCourse  End '|| r_data.cohort, 'X'); 
+              LOG_PKG.log_msg( -222,'Step28-1 Load fource_LocalPatClinicalCourse  End '|| r_data.cohort, 'X'); 
 end loop;
 commit;
-              TM_LOG_PKG.log_msg( -222,'Step28 Load fource_LocalPatClinicalCourse Rows End ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step28 Load fource_LocalPatClinicalCourse Rows End ', 'X'); 
 end; 
 /
 
 -- Flag the days when the patients was in the hospital
 begin
-              TM_LOG_PKG.log_msg( -222,'Step29 Load fource_LocalPatClinicalCourse Start ', 'X'); 
+              LOG_PKG.log_msg( -222,'Step29 Load fource_LocalPatClinicalCourse Start ', 'X'); 
 merge into fource_LocalPatClinicalCourse p
 	using (
     select distinct p.patient_num,  p.calendar_date
@@ -843,13 +865,13 @@ merge into fource_LocalPatClinicalCourse p
     when matched then
         update set p.in_hospital=1;
         
-              TM_LOG_PKG.log_msg( -222,'Step29 Load fource_LocalPatClinicalCourse Rows End ', 'X');        
+              LOG_PKG.log_msg( -222,'Step29 Load fource_LocalPatClinicalCourse Rows End ', 'X');        
 commit;
 end;
 /
 -- Flag the days when the patient was in the ICU, making sure the patient was also in the hospital on those days
 begin
-TM_LOG_PKG.log_msg( -222,'Step30 Load fource_LocalPatClinicalCourse Rows Start', 'X'); 
+LOG_PKG.log_msg( -222,'Step30 Load fource_LocalPatClinicalCourse Rows Start', 'X'); 
 merge into fource_LocalPatClinicalCourse p
     using ( 
     --with pt_icu as (
@@ -868,14 +890,14 @@ merge into fource_LocalPatClinicalCourse p
     when matched then
         update set p.in_icu=p.in_hospital;
 
-TM_LOG_PKG.log_msg( -222,'Step30 Load fource_LocalPatClinicalCourse Rows End '||sql%rowcount, 'X'); 
+LOG_PKG.log_msg( -222,'Step30 Load fource_LocalPatClinicalCourse Rows End '||sql%rowcount, 'X'); 
 commit;
 end;
 /
 
 truncate table fource_LocalPatientSummary ;
 begin
-TM_LOG_PKG.log_msg( -222,'Step31 Load fource_LocalPatientSummary Rows Start', 'X'); 
+LOG_PKG.log_msg( -222,'Step31 Load fource_LocalPatientSummary Rows Start', 'X'); 
 insert into fource_LocalPatientSummary
 	select (select siteid from fource_config where rownum=1), c.cohort, c.patient_num, 
         c.admission_date,
@@ -910,13 +932,13 @@ insert into fource_LocalPatientSummary
 			on p.sex_cd = m.local_code
 				and m.code in ('sex_patient:male','sex_patient:female');
                
-TM_LOG_PKG.log_msg( -222,'Step31 Load fource_LocalPatientSummary Rows End '||sql%rowcount, 'X'); 
+LOG_PKG.log_msg( -222,'Step31 Load fource_LocalPatientSummary Rows End '||sql%rowcount, 'X'); 
 commit;
 end;
 /
 
 begin
-TM_LOG_PKG.log_msg( -222, 'Step32 Merge fource_LocalPatientSummary Start ', 'X');
+LOG_PKG.log_msg( -222, 'Step32 Merge fource_LocalPatientSummary Start ', 'X');
 merge into fource_LocalPatientSummary s
 using (select p.sex, p.patient_num
 	   from fource_LocalPatientSummary s
@@ -937,9 +959,9 @@ using (select p.sex, p.patient_num
     on (s.patient_num = x.patient_num )
     when matched then
 	update set s.sex = (case when s.sex='other' then x.sex when s.sex<>x.sex then 'other' else s.sex end);
-     TM_LOG_PKG.log_msg( -222, 'Step32 Merge fource_LocalPatientSummary End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step32 Merge fource_LocalPatientSummary End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step32 Merge fource_LocalPatientSummary End ', 'X');
+LOG_PKG.log_msg( -222, 'Step32 Merge fource_LocalPatientSummary End ', 'X');
 
 end;
 /
@@ -949,7 +971,7 @@ end;
 -- Get the last discharge date and whether the patient is still in the hospital as of the source_data_updated_date.
 
 begin
-TM_LOG_PKG.log_msg( -222, 'Step33 Merge fource_LocalPatientSummary Start ', 'X');
+LOG_PKG.log_msg( -222, 'Step33 Merge fource_LocalPatientSummary Start ', 'X');
 	merge into fource_LocalPatientSummary s
 	using ( select p.cohort, p.patient_num, max(a.discharge_date) last_discharge_date
 			from fource_LocalPatientSummary p
@@ -963,9 +985,9 @@ TM_LOG_PKG.log_msg( -222, 'Step33 Merge fource_LocalPatientSummary Start ', 'X')
         update set s.last_discharge_date = (case when x.last_discharge_date>s.source_data_updated_date then to_date('01-JAN-1900','DD-MON-YYYY') 
                                             else x.last_discharge_date end),
                    s.still_in_hospital = (case when x.last_discharge_date>s.source_data_updated_date then 1 else 0 end);
-     TM_LOG_PKG.log_msg( -222, 'Step33 Merge fource_LocalPatientSummary End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step33 Merge fource_LocalPatientSummary End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step33 Merge fource_LocalPatientSummary End ', 'X');
+LOG_PKG.log_msg( -222, 'Step33 Merge fource_LocalPatientSummary End ', 'X');
 
 end;
 /
@@ -973,7 +995,7 @@ end;
 --select * from fource_LocalPatClinicalCourse where in_icu = 1;
 -- Get earliest ICU date for patients who were in the ICU.
 begin
-TM_LOG_PKG.log_msg( -222, 'Step34 Merge fource_LocalPatientSummary Start ', 'X');
+LOG_PKG.log_msg( -222, 'Step34 Merge fource_LocalPatientSummary Start ', 'X');
 merge into fource_LocalPatientSummary s
       using (
 			select cohort, patient_num, min(calendar_date) icu_date
@@ -985,9 +1007,9 @@ merge into fource_LocalPatientSummary s
         when matched then
         update set s.icu_date = x.icu_date,
                    s.icu = 1;
-     TM_LOG_PKG.log_msg( -222, 'Step34 Merge fource_LocalPatientSummary End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step34 Merge fource_LocalPatientSummary End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step34 Merge fource_LocalPatientSummary End ', 'X');
+LOG_PKG.log_msg( -222, 'Step34 Merge fource_LocalPatientSummary End ', 'X');
 
 end;
 /
@@ -997,15 +1019,15 @@ end;
 --------------------------------------------------------------------------------
  truncate table fource_LocalPatObservations;
 begin
-TM_LOG_PKG.log_msg( -222, 'Step35 Merge fource_LocalPatObservations Start ', 'X');
+LOG_PKG.log_msg( -222, 'Step35 Merge fource_LocalPatObservations Start ', 'X');
 insert into fource_LocalPatObservations
 	select (select siteid from fource_config where rownum = 1), 
     cohort, patient_num, days_since_admission, concept_type, concept_code, value
 	from fource_observations;
     
-     TM_LOG_PKG.log_msg( -222, 'Step35  Merge fource_LocalPatObservations End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step35  Merge fource_LocalPatObservations End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step35  Merge fource_LocalPatObservations End ', 'X');
+LOG_PKG.log_msg( -222, 'Step35  Merge fource_LocalPatObservations End ', 'X');
 
 end;
 /
@@ -1015,7 +1037,7 @@ end;
 truncate  table fource_LocalPatientRace;
 
 begin
-    TM_LOG_PKG.log_msg( -222, 'Step36  Merge fource_LocalPatientRace Start', 'X'); 
+    LOG_PKG.log_msg( -222, 'Step36  Merge fource_LocalPatientRace Start', 'X'); 
 insert into fource_LocalPatientRace
 		select distinct (select siteid from fource_config where rownum = 1) siteid, cohort, patient_num, race_local_code, race_4ce
 		from (
@@ -1039,18 +1061,18 @@ insert into fource_LocalPatientRace
 		) t
         where ( select race_data_available from fource_config where rownum =1 )=1;
 
-    TM_LOG_PKG.log_msg( -222, 'Step36  Merge fource_LocalPatientRace End', 'X'); 
+    LOG_PKG.log_msg( -222, 'Step36  Merge fource_LocalPatientRace End', 'X'); 
 commit;
 end;
 /
 
  truncate table fource_LocalCohorts;
 begin
-TM_LOG_PKG.log_msg( -222, 'Step37 Merge fource_LocalCohorts Start', 'X'); 
+LOG_PKG.log_msg( -222, 'Step37 Merge fource_LocalCohorts Start', 'X'); 
 insert into fource_LocalCohorts
 	select (select siteid from fource_config where rownum = 1) siteid, cohort, include_in_phase1, include_in_phase2, source_data_updated_date, earliest_adm_date, latest_adm_date 
 	from fource_cohort_config;
-    TM_LOG_PKG.log_msg( -222, 'Step37 Merge fource_LocalCohorts End', 'X'); 
+    LOG_PKG.log_msg( -222, 'Step37 Merge fource_LocalCohorts End', 'X'); 
 commit;
 end;
 /
@@ -1062,7 +1084,7 @@ end;
 -- Get daily counts, except for ICU
 
 begin
-     TM_LOG_PKG.log_msg( -222, 'Step38 Merge fource_LocalDailyCounts Start', 'X');   
+     LOG_PKG.log_msg( -222, 'Step38 Merge fource_LocalDailyCounts Start', 'X');   
      
     insert into fource_LocalDailyCounts 
 	select (select siteid from fource_config where rownum = 1) siteid, cohort, calendar_date, 
@@ -1082,9 +1104,9 @@ begin
 		cross join fource_LocalPatClinicalCourse c
 	group by cohort, calendar_date, icu_data_available, death_data_available;
     
-     TM_LOG_PKG.log_msg( -222,'Step38-1 Merge fource_LocalDailyCounts End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222,'Step38-1 Merge fource_LocalDailyCounts End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step38 Merge fource_LocalDailyCounts End ', 'X');
+LOG_PKG.log_msg( -222, 'Step38 Merge fource_LocalDailyCounts End ', 'X');
 
 end;
 /
@@ -1098,7 +1120,7 @@ end;
   truncate table fource_LocalClinicalCourse ;
 
 begin
-TM_LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalClinicalCourse S ', 'X');
+LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalClinicalCourse S ', 'X');
 insert into fource_LocalClinicalCourse
 	select  (select siteid from fource_config where rownum = 1) siteid, 
         c.cohort, c.days_since_admission, 
@@ -1114,9 +1136,9 @@ insert into fource_LocalClinicalCourse
 		inner join fource_cohort_patients p
 			on c.cohort=p.cohort and c.patient_num=p.patient_num
 	group by c.cohort, c.days_since_admission, icu_data_available, death_data_available;
-     TM_LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalClinicalCourse End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalClinicalCourse End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalClinicalCourse End ', 'X');
+LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalClinicalCourse End ', 'X');
 
 end;
 /
@@ -1126,7 +1148,7 @@ end;
 
 truncate table fource_LocalAgeSex;
 begin
-TM_LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalAgeSex Start ', 'X');
+LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalAgeSex Start ', 'X');
 insert into fource_LocalAgeSex
 	select  (select siteid from fource_config where rownum = 1) siteid, cohort, age_group, nvl(avg(cast(nullif(age,-999) as numeric(18,10))),-999), sex, count(*), sum(severe)
 		from fource_LocalPatientSummary
@@ -1143,9 +1165,9 @@ insert into fource_LocalAgeSex
 	select  (select siteid from fource_config where rownum = 1) siteid, cohort, 'all', nvl(avg(cast(nullif(age,-999) as numeric(18,10))),-999), 'all', count(*), sum(severe)
 		from fource_LocalPatientSummary
 		group by cohort;
-     TM_LOG_PKG.log_msg( -222, 'Step39-1 Merge fource_LocalAgeSex End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step39-1 Merge fource_LocalAgeSex End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalAgeSex End ', 'X');
+LOG_PKG.log_msg( -222, 'Step39 Merge fource_LocalAgeSex End ', 'X');
 
 end;
 /
@@ -1155,7 +1177,7 @@ end;
 
  truncate table fource_LocalLabs;
 begin
-TM_LOG_PKG.log_msg( -222, 'Step40 Merge fource_LocalLabs Start ', 'X');
+LOG_PKG.log_msg( -222, 'Step40 Merge fource_LocalLabs Start ', 'X');
 insert into fource_LocalLabs
 	select  (select siteid from fource_config where rownum = 1) siteid, cohort, concept_code, days_since_admission,
 		count(*), 
@@ -1177,9 +1199,9 @@ insert into fource_LocalLabs
 	where concept_type='LAB-LOINC' and days_since_admission>=0
 	group by cohort, concept_code, days_since_admission;
     
-     TM_LOG_PKG.log_msg( -222, 'Step40-1 Merge fource_LocalLabs End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step40-1 Merge fource_LocalLabs End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step40 Merge fource_LocalLabs End ', 'X');
+LOG_PKG.log_msg( -222, 'Step40 Merge fource_LocalLabs End ', 'X');
 
 end;
 /
@@ -1191,7 +1213,7 @@ end;
 truncate table fource_LocalDiagProcMed ;
 
 begin
-TM_LOG_PKG.log_msg( -222, 'Step41 Merge fource_LocalDiagProcMed Start ', 'X');
+LOG_PKG.log_msg( -222, 'Step41 Merge fource_LocalDiagProcMed Start ', 'X');
 insert into fource_LocalDiagProcMed
 	select  (select siteid from fource_config where rownum = 1) siteid, 
             cohort, concept_type, concept_code,
@@ -1217,7 +1239,7 @@ insert into fource_LocalDiagProcMed
 			sum(severe*(case when first_day >= 90 then 1 else 0 end))
 	from (
 		select cohort, patient_num, severe, concept_type,
-			(case when concept_type in ('DIAG-ICD9','DIAG-ICD10') then substr(concept_code,1,3) else concept_code end) concept_code,
+			(case when concept_type in ('DIAG-ICD9','DIAG-ICD10') then substr(concept_code,1,10) else concept_code end) concept_code,
 			--max(case when days_since_admission between @lookback_days and -15 then 1 else 0 end) before_adm,
 			max(case when days_since_admission between -365 and -15 then 1 else 0 end) before_adm,
 			max(case when days_since_admission between -14 and -1 then 1 else 0 end) dayN14toN1,
@@ -1231,13 +1253,13 @@ insert into fource_LocalDiagProcMed
 		from fource_observations
 		where concept_type in ('DIAG-ICD9','DIAG-ICD10','MED-CLASS','PROC-GROUP','COVID-TEST','SEVERE-LAB','SEVERE-DIAG')
 		group by cohort, patient_num, severe, concept_type, 
-			(case when concept_type in ('DIAG-ICD9','DIAG-ICD10') then substr(concept_code,1,3) else concept_code end)
+			(case when concept_type in ('DIAG-ICD9','DIAG-ICD10') then substr(concept_code,1,10) else concept_code end)
 	) t
 	group by cohort, concept_type, concept_code;
 
-     TM_LOG_PKG.log_msg( -222, 'Step41-1 Merge fource_LocalDiagProcMed End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step41-1 Merge fource_LocalDiagProcMed End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step41 Merge fource_LocalDiagProcMed End ', 'X');
+LOG_PKG.log_msg( -222, 'Step41 Merge fource_LocalDiagProcMed End ', 'X');
 
 end;
 /
@@ -1248,16 +1270,16 @@ end;
 --------------------------------------------------------------------------------
 truncate table fource_LocalRaceByLocalCode ;
 begin
-TM_LOG_PKG.log_msg( -222, 'Step42 Merge fource_LocalRaceByLocalCode Start ', 'X');
+LOG_PKG.log_msg( -222, 'Step42 Merge fource_LocalRaceByLocalCode Start ', 'X');
 insert into fource_LocalRaceByLocalCode
 	select (select siteid from fource_config where rownum = 1), r.cohort, r.race_local_code, r.race_4ce, count(*), sum(p.severe)
 	from fource_LocalPatientRace r
 		inner join fource_cohort_patients p
 			on r.cohort=p.cohort and r.patient_num=p.patient_num
 	group by r.cohort, r.race_local_code, r.race_4ce;
-     TM_LOG_PKG.log_msg( -222, 'Step42-1 Merge fource_LocalRaceByLocalCode End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step42-1 Merge fource_LocalRaceByLocalCode End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step42 Merge fource_LocalRaceByLocalCode End ', 'X');
+LOG_PKG.log_msg( -222, 'Step42 Merge fource_LocalRaceByLocalCode End ', 'X');
 
 end;
 /
@@ -1269,16 +1291,16 @@ end;
 
 truncate table fource_LocalRaceBy4CECode;
  begin
- TM_LOG_PKG.log_msg( -222,'Step43 Merge fource_LocalRaceBy4CECode Start ', 'X');
+ LOG_PKG.log_msg( -222,'Step43 Merge fource_LocalRaceBy4CECode Start ', 'X');
  insert into fource_LocalRaceBy4CECode
 	select (select siteid from fource_config where rownum = 1), r.cohort, r.race_4ce, count(*), sum(p.severe)
 	from fource_LocalPatientRace r
 		inner join fource_cohort_patients p
 			on r.cohort=p.cohort and r.patient_num=p.patient_num
 	group by r.cohort, r.race_4ce;
-     TM_LOG_PKG.log_msg( -222, 'Step43-1 Merge fource_LocalRaceBy4CECode End '||sql%rowcount, 'X');               
+     LOG_PKG.log_msg( -222, 'Step43-1 Merge fource_LocalRaceBy4CECode End '||sql%rowcount, 'X');               
 commit;
-TM_LOG_PKG.log_msg( -222, 'Step43 Merge fource_LocalRaceBy4CECode End ', 'X');
+LOG_PKG.log_msg( -222, 'Step43 Merge fource_LocalRaceBy4CECode End ', 'X');
 
 end;
 /
@@ -1290,12 +1312,12 @@ end;
 truncate table fource_Cohorts;
 
 begin
-TM_LOG_PKG.log_msg( -222,'Step44 Load fource_Cohorts  Start ', 'X');
+LOG_PKG.log_msg( -222,'Step44 Load fource_Cohorts  Start ', 'X');
 insert into fource_Cohorts
 	select (select siteid from fource_config where rownum = 1), cohort, source_data_updated_date, earliest_adm_date, latest_adm_date 
 	from fource_cohort_config
 	where include_in_phase1=1;
-TM_LOG_PKG.log_msg( -222,'Step44 Load fource_Cohorts  End ', 'X');
+LOG_PKG.log_msg( -222,'Step44 Load fource_Cohorts  End ', 'X');
 
 commit;
 
@@ -1308,12 +1330,12 @@ end;
 
  truncate table fource_DailyCounts ;
 begin
-TM_LOG_PKG.log_msg( -222,'Step45 Load fource_DailyCounts  Start ', 'X');
+LOG_PKG.log_msg( -222,'Step45 Load fource_DailyCounts  Start ', 'X');
 insert into fource_DailyCounts 
 	select *
 	from fource_LocalDailyCounts
 	where cohort in (select cohort from fource_cohort_config where include_in_phase1=1);
-TM_LOG_PKG.log_msg( -222,'Step45 Load fource_DailyCounts  End ', 'X');
+LOG_PKG.log_msg( -222,'Step45 Load fource_DailyCounts  End ', 'X');
 
 commit;
 
@@ -1326,12 +1348,12 @@ end;
 
  truncate table fource_ClinicalCourse;
 begin
-TM_LOG_PKG.log_msg( -222,'Step46 Load fource_ClinicalCourse  Start ', 'X');
+LOG_PKG.log_msg( -222,'Step46 Load fource_ClinicalCourse  Start ', 'X');
 insert into fource_ClinicalCourse 
 	select * 
 	from fource_LocalClinicalCourse
 	where cohort in (select cohort from fource_cohort_config where include_in_phase1=1);
-TM_LOG_PKG.log_msg( -222,'Step46 Load fource_ClinicalCourse  End ', 'X');
+LOG_PKG.log_msg( -222,'Step46 Load fource_ClinicalCourse  End ', 'X');
 
 commit;
 
@@ -1343,12 +1365,12 @@ end;
 
 truncate table fource_AgeSex ;
 begin
-TM_LOG_PKG.log_msg( -222,'Step47 Load fource_AgeSex  Start ', 'X');
+LOG_PKG.log_msg( -222,'Step47 Load fource_AgeSex  Start ', 'X');
 insert into fource_AgeSex 
 	select * 
 	from fource_LocalAgeSex
 	where cohort in (select cohort from fource_cohort_config where include_in_phase1=1);
-TM_LOG_PKG.log_msg( -222,'Step47 Load fource_AgeSex  End ', 'X');
+LOG_PKG.log_msg( -222,'Step47 Load fource_AgeSex  End ', 'X');
 
 commit;
 
@@ -1360,13 +1382,13 @@ end;
 
 truncate table fource_Labs;
 begin
-TM_LOG_PKG.log_msg( -222,'Step48 Load fource_Labs  Start ', 'X');
+LOG_PKG.log_msg( -222,'Step48 Load fource_Labs  Start ', 'X');
 insert into fource_Labs 
 	select * 
 	from fource_LocalLabs
 	where cohort in ( select cohort from fource_cohort_config where include_in_phase1=1 );
 
-TM_LOG_PKG.log_msg( -222,'Step48 Load fource_Labs  End ', 'X');
+LOG_PKG.log_msg( -222,'Step48 Load fource_Labs  End ', 'X');
 
 commit;
 
@@ -1378,13 +1400,13 @@ end;
 
 truncate table fource_DiagProcMed;
 begin
-TM_LOG_PKG.log_msg( -222,'Step49 Load fource_DiagProcMed  Start ', 'X');
+LOG_PKG.log_msg( -222,'Step49 Load fource_DiagProcMed  Start ', 'X');
 insert into fource_DiagProcMed 
 	select * 
 	from fource_LocalDiagProcMed
 	where cohort in (select cohort from fource_cohort_config where include_in_phase1=1);
 
-TM_LOG_PKG.log_msg( -222,'Step49 Load fource_DiagProcMed  End ', 'X');
+LOG_PKG.log_msg( -222,'Step49 Load fource_DiagProcMed  End ', 'X');
 
 commit;
 
@@ -1398,13 +1420,13 @@ end;
  truncate table fource_RaceByLocalCode;
  
  begin
- TM_LOG_PKG.log_msg( -222,'Step50 Load fource_RaceByLocalCode  Start ', 'X');
+ LOG_PKG.log_msg( -222,'Step50 Load fource_RaceByLocalCode  Start ', 'X');
 insert into fource_RaceByLocalCode 
 	select * 
 	from fource_LocalRaceByLocalCode
 	where cohort in (select cohort from fource_cohort_config where include_in_phase1=1);
 
-TM_LOG_PKG.log_msg( -222,'Step50 Load fource_RaceByLocalCode  End ', 'X');
+LOG_PKG.log_msg( -222,'Step50 Load fource_RaceByLocalCode  End ', 'X');
 
 commit;
 
@@ -1418,13 +1440,13 @@ end;
 truncate table fource_RaceBy4CECode ;
 begin
 
-TM_LOG_PKG.log_msg( -222,'Step51 Load fource_RaceBy4CECode  Start ', 'X');
+LOG_PKG.log_msg( -222,'Step51 Load fource_RaceBy4CECode  Start ', 'X');
 insert into fource_RaceBy4CECode 
 	select * 
 	from fource_LocalRaceBy4CECode
 	where cohort in (select cohort from fource_cohort_config where include_in_phase1=1);
 
-TM_LOG_PKG.log_msg( -222,'Step51 Load fource_RaceBy4CECode  End ', 'X');
+LOG_PKG.log_msg( -222,'Step51 Load fource_RaceBy4CECode  End ', 'X');
 
 commit;
 
@@ -1436,12 +1458,12 @@ end;
 truncate  table fource_LabCodes;
 
 begin
-TM_LOG_PKG.log_msg( -222,'Step52 Load fource_LabCodes  Start ', 'X');
+LOG_PKG.log_msg( -222,'Step52 Load fource_LabCodes  Start ', 'X');
 insert into fource_LabCodes
 	select (select siteid from fource_config where rownum = 1), fource_loinc, fource_lab_units, fource_lab_name, scale_factor, replace(local_lab_code,',',';'), replace(local_lab_units,',',';'), replace(local_lab_name,',',';'), replace(notes,',',';')
 	from fource_lab_map_report;
 
-TM_LOG_PKG.log_msg( -222,'Step52 Load fource_LabCodes  End ', 'X');
+LOG_PKG.log_msg( -222,'Step52 Load fource_LabCodes  End ', 'X');
 
 commit;
 
@@ -1449,7 +1471,7 @@ end;
 /
 begin
 
-TM_LOG_PKG.log_msg( -222,'Step53 Load   Start ', 'X');
+LOG_PKG.log_msg( -222,'Step53 Load   Start ', 'X');
 delete from fource_LabCodes
 where scale_factor = 0 ;
 
@@ -1458,20 +1480,20 @@ commit;
 delete from fource_LocalPatClinicalCourse where in_hospital=0 and severe=0 and in_icu=0 and dead=0;
 
 commit;
-TM_LOG_PKG.log_msg( -222,'Step53 Load   End ', 'X');
+LOG_PKG.log_msg( -222,'Step53 Load   End ', 'X');
 end;
 /
 truncate table fource_LocalPatientMapping ;
   
 begin
 
-TM_LOG_PKG.log_msg( -222,'Step54 Load   Start ', 'X');        
+LOG_PKG.log_msg( -222,'Step54 Load   Start ', 'X');        
 insert into fource_LocalPatientMapping (siteid, patient_num, study_num)   
  select  (select siteid from fource_config where   rownum = 1),patient_num,patient_num from ( select distinct patient_num
 			from fource_LocalPatientSummary) where (select replace_patient_num from fource_config where  rownum = 1) = 1;
 commit;
 
-TM_LOG_PKG.log_msg( -222,'Step54 Load   End ', 'X');
+LOG_PKG.log_msg( -222,'Step54 Load   End ', 'X');
 
 commit;
 

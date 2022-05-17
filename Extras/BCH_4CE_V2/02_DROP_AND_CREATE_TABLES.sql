@@ -51,10 +51,21 @@ drop table fource_LocalPatClinicalCourse ;
 drop table fource_LocalPatObservations ;
 drop table fource_LocalPatientRace ;
 drop table fource_LocalPatientMapping ;
-commit;
+drop table stg_fource_misc;        
+
+drop table fource_misc;
+
+create table stg_fource_misc
+(
+mrn  varchar2(100),
+misc_date varchar2(50) );
+create table fource_misc (
+        patient_num int not null,
+        misc_date date not null
+);
+alter table fource_misc add primary key (patient_num);
 
 
-----
 create table fource_config (
 	siteid varchar(20), -- Up to 20 letters or numbers, must start with letter, no spaces or special characters.
 	race_data_available int, -- 1 if your site collects race/ethnicity data; 0 if your site does not collect this.
@@ -95,7 +106,7 @@ alter table fource_code_map add primary key (code, local_code);
 
 
 
-create table fource_icu_location as select cast(department_id as varchar2(50)) location_cd from icus;
+--create table fource_icu_location as select cast(department_id as varchar2(50)) location_cd from icus;
 
 create table fource_lab_map (
 	fource_loinc varchar(20) not null, 
@@ -103,7 +114,7 @@ create table fource_lab_map (
 	fource_lab_name varchar(100) not null,
 	scale_factor float not null, 
 	local_lab_code varchar(50) not null, 
-	local_lab_units varchar(20) not null, 
+	local_lab_units varchar(100) not null, 
 	local_lab_name varchar(500) not null
 );
 
@@ -132,7 +143,7 @@ create table fource_lab_map_report (
 	fource_lab_name varchar(100),
 	scale_factor float, 
 	local_lab_code varchar(50) not null, 
-	local_lab_units varchar(20) not null, 
+	local_lab_units varchar(100) not null, 
 	local_lab_name varchar(500),
 	num_facts int,
 	mean_value numeric(18,5),
@@ -722,7 +733,7 @@ create table fource_LabCodes (
 	fource_lab_name varchar(100) not null,
 	scale_factor float not null, 
 	local_lab_code varchar(50) not null, 
-	local_lab_units varchar(20) not null, 
+	local_lab_units varchar(100) not null, 
 	local_lab_name varchar(500) not null,
 	notes varchar(1000)
 );
@@ -739,3 +750,55 @@ create table fource_LocalPatientMapping (
 );
 alter table fource_LocalPatientMapping add primary key (patient_num, study_num, siteid);
 
+
+
+  CREATE TABLE ETL_RUN_LOG 
+   (	LOG_ID NUMBER NOT NULL ENABLE, 
+	RUN_ID NUMBER NOT NULL ENABLE, 
+	LOG_MESSAGE VARCHAR2(4000) NOT NULL ENABLE, 
+	LOG_MESSAGE_TYPE VARCHAR2(32) NOT NULL ENABLE, 
+	LOG_TIMESTAMP TIMESTAMP (6) NOT NULL ENABLE, 
+	LOG_SESSION_ID VARCHAR2(32)
+   ) ;
+          
+
+CREATE SEQUENCE ETL_LOG_SEQ1 INCREMENT BY 1 START WITH 1 CACHE 20 ORDER;
+
+create or replace PACKAGE           LOG_PKG AS 
+		    PROCEDURE log_msg(
+		        p_runid IN NUMBER DEFAULT -9,
+		        p_msg      IN VARCHAR2,
+		        p_msg_type IN VARCHAR2 DEFAULT 'X');
+
+		END LOG_PKG;
+/
+
+create or replace PACKAGE BODY           LOG_PKG
+		AS
+		
+		  PROCEDURE log_msg(
+		      p_runid IN NUMBER DEFAULT -9,
+		      p_msg      IN VARCHAR2,
+		      p_msg_type IN VARCHAR2 DEFAULT 'X')
+		  AS
+		    v_logid NUMBER := 0;
+		    PRAGMA AUTONOMOUS_TRANSACTION;
+		  BEGIN
+
+		    select ETL_LOG_SEQ1.nextval into v_logid from dual;
+		    INSERT INTO ETL_RUN_LOG VALUES
+		      (v_logid, p_runid, p_msg, p_msg_type, CURRENT_TIMESTAMP, DBMS_SESSION.unique_session_id
+		      );
+		    COMMIT;  
+
+		  END;
+
+		END LOG_PKG;
+        
+        /
+        
+        
+
+
+        
+        
