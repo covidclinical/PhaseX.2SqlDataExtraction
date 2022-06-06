@@ -186,7 +186,7 @@ create table fource_lab_map (
 	fource_lab_name varchar(100) not null,
 	scale_factor float not null, 
 	local_lab_code varchar(50) not null, 
-	local_lab_units varchar(25) not null, 
+	local_lab_units varchar(50) not null, 
 	local_lab_name varchar(500) not null
 );
 
