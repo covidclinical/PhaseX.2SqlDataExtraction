@@ -186,7 +186,7 @@ create table fource_lab_map (
 	fource_lab_name varchar(100) not null,
 	scale_factor float not null, 
 	local_lab_code varchar(50) not null, 
-	local_lab_units varchar(20) not null, 
+	local_lab_units varchar(50) not null, 
 	local_lab_name varchar(500) not null
 );
 
@@ -222,6 +222,7 @@ Insert into FOURCE_LAB_MAP (FOURCE_LOINC,FOURCE_LAB_UNITS,FOURCE_LAB_NAME,SCALE_
 Insert into FOURCE_LAB_MAP (FOURCE_LOINC,FOURCE_LAB_UNITS,FOURCE_LAB_NAME,SCALE_FACTOR,LOCAL_LAB_CODE,LOCAL_LAB_UNITS,LOCAL_LAB_NAME) values ('751-8','10*3/uL','neutrophil count',1,'LAB:3775720','K cells/uL','Absolute Neutrophil Count');
 Insert into FOURCE_LAB_MAP (FOURCE_LOINC,FOURCE_LAB_UNITS,FOURCE_LAB_NAME,SCALE_FACTOR,LOCAL_LAB_CODE,LOCAL_LAB_UNITS,LOCAL_LAB_NAME) values ('777-3','10*3/uL','platelet count',1,'LAB:3775660','K cells/uL','Platelet');
 Insert into FOURCE_LAB_MAP (FOURCE_LOINC,FOURCE_LAB_UNITS,FOURCE_LAB_NAME,SCALE_FACTOR,LOCAL_LAB_CODE,LOCAL_LAB_UNITS,LOCAL_LAB_NAME) values ('777-3','10*3/uL','platelet count',1,'LAB:3775872','K cells/uL','Platelet');
+Insert into FOURCE_LAB_MAP (FOURCE_LOINC,FOURCE_LAB_UNITS,FOURCE_LAB_NAME,SCALE_FACTOR,LOCAL_LAB_CODE,LOCAL_LAB_UNITS,LOCAL_LAB_NAME) values ('34714-6','DEFAULT','INR',1,'LAB:3775729','NOT DEFINED IN SOURCE','INR');
 
 
 REM INSERTING into FOURCE_LAB_MAP
