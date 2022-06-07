@@ -568,18 +568,15 @@ end;
 /
 
 --and cast(trunc(f.start_date) as date) between dateadd(dd,@lookback_days,p.admission_date) and p.source_data_updated_date
-
 declare
-v_local_lab_code  varchar2(2000);
-v_local_lab_units  varchar2(2000);
+v_fource_loinc  varchar2(2000);
+
     --step25
 begin
 LOG_PKG.log_msg( -222,'Step21 Load fource_observations Start ', 'X');  
-for r_data in ( select distinct local_lab_code,local_lab_units from fource_lab_map  ) loop
+for r_data in ( select distinct fource_loinc from fource_lab_map   ) loop
 
-v_local_lab_code := r_data.local_lab_code;
-v_local_lab_units := r_data.local_lab_units;
-
+v_fource_loinc := r_data.fource_loinc;
 
 --for r_data in ( select distinct patient_num from fource_cohort_patients fcp  ) loop
 
@@ -600,11 +597,11 @@ insert into fource_observations (cohort, patient_num, severe, concept_type, conc
 			on f.patient_num=p.patient_num
 	where l.local_lab_code is not null
 		and f.nval_num is not null
-        and l.local_lab_code  = r_data.local_lab_code
-        and l.local_lab_units = r_data.local_lab_units
+        and l.fource_loinc  = r_data.fource_loinc
 		and f.nval_num >= 0
 		and trunc(f.start_date) between trunc(p.admission_date)-60 and trunc(p.source_data_updated_date) --@lab lookback days
 	group by p.cohort, p.patient_num, p.severe, p.admission_date, trunc(f.start_date), l.fource_loinc;
+    
 LOG_PKG.log_msg( -222,'Step21 Load fource_observations Rows '||sql%rowcount||' End ', 'X'); 
 commit;
 end loop;
@@ -615,7 +612,7 @@ exception
  when others then
        dbms_output.put_line('SQLCODE: '|| SQLCODE);
         dbms_output.put_line('SQLERRM: '|| SQLERRM);
-LOG_PKG.log_msg( -222,'Step21 Load fource_observations Rows  Error '||v_local_lab_code||' '||v_local_lab_units, 'X'); 
+LOG_PKG.log_msg( -222,'Step21 Load fource_observations Rows  Error '||v_fource_loinc, 'X'); 
 raise;
 end;
 
